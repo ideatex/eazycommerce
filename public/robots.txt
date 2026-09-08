@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://cozycommerce.dev
+
+# Sitemaps
+Sitemap: https://cozycommerce.dev/sitemap.xml

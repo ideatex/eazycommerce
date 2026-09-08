@@ -1,14 +1,15 @@
 {
-  "name": "cozycommerce",
+  "name": "vanigam-ecommerce",
   "version": "1.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
     "postbuild": "next-sitemap",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
-    "import-demo-data": "node scripts/import-demo-data.js"
+    "test": "node scripts/test-responsive-matrix.js && node scripts/test-admin-engine.js && node scripts/test-b2b2c-scenarios.js && node scripts/test-image-upload.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

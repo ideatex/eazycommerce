@@ -29,8 +29,8 @@ export default function LargePromoBanner({
         </h2>
         <p>{description}</p>
         <Link
-          href={`/products/${link}`}
-          className="inline-flex font-medium text-custom-sm text-white bg-blue py-3 px-7 rounded-lg  ease-out duration-200 hover:bg-blue-dark mt-7.5"
+          href={link.startsWith("/") ? link : `/products/${link}`}
+          className="inline-flex font-medium text-custom-sm text-white bg-blue py-3 px-7 rounded-lg ease-out duration-200 hover:bg-blue-dark mt-7.5 shadow-xs"
         >
           {buttonText}
         </Link>
@@ -38,7 +38,7 @@ export default function LargePromoBanner({
       <Image
         src={imageUrl}
         alt="promo img"
-        className="absolute bottom-0 right-4 lg:right-26 -z-1"
+        className="absolute bottom-0 right-2 sm:right-6 lg:right-24 -z-1 max-h-[160px] sm:max-h-[260px] lg:max-h-[360px] w-auto max-w-[45vw] sm:max-w-[420px] object-contain opacity-25 sm:opacity-100 transition-opacity"
         width={420}
         height={369}
       />

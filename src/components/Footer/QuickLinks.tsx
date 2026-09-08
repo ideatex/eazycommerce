@@ -14,12 +14,12 @@ const quickLinks = [
   {
     id: 3,
     label: "Terms of Use",
-    href: "/terms-condition",
+    href: "/terms-conditions",
   },
   {
     id: 4,
     label: "FAQ's",
-    href: "#",
+    href: "/faq",
   },
   {
     id: 5,

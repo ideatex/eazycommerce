@@ -1,4 +1,5 @@
 "use client";
+import { SessionProvider } from "next-auth/react";
 import { ModalProvider } from "../context/QuickViewModalContext";
 import { ReduxProvider } from "@/redux/provider";
 import QuickViewModal from "@/components/Common/QuickViewModal";
@@ -8,22 +9,23 @@ import PreviewSliderModal from "@/components/Common/PreviewSlider";
 import CartProvider from "@/components/Providers/CartProvider";
 import CartHydration from "@/components/Providers/CartHydration";
 
-
 const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
-    <ReduxProvider>
-      <CartHydration />
-      <CartProvider>
-        <ModalProvider>
-          <PreviewSliderProvider>
-            {children}
-            <QuickViewModal />
-            <CartSidebarModal />
-            <PreviewSliderModal />
-          </PreviewSliderProvider>
-        </ModalProvider>
-      </CartProvider>
-    </ReduxProvider>
+    <SessionProvider>
+      <ReduxProvider>
+        <CartHydration />
+        <CartProvider>
+          <ModalProvider>
+            <PreviewSliderProvider>
+              {children}
+              <QuickViewModal />
+              <CartSidebarModal />
+              <PreviewSliderModal />
+            </PreviewSliderProvider>
+          </ModalProvider>
+        </CartProvider>
+      </ReduxProvider>
+    </SessionProvider>
   );
 };
 

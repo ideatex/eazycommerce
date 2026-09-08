@@ -1,0 +1,18 @@
+<svg width="210" height="52" viewBox="0 0 210 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Brand Icon Badge -->
+  <rect x="2" y="2" width="48" height="48" rx="13" fill="#3C50E0"/>
+  <rect x="2" y="2" width="48" height="48" rx="13" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="1.5"/>
+
+  <!-- Shopping Cart Icon inside Badge -->
+  <g transform="translate(26,25)" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-12,-11 L-8.5,-11 L-4.5,6 L11,6 L14,-7 L-7,-7"/>
+    <circle cx="-2" cy="12" r="2.5" fill="#FFFFFF" stroke="none"/>
+    <circle cx="8" cy="12" r="2.5" fill="#FFFFFF" stroke="none"/>
+  </g>
+
+  <!-- Wordmark: Primary Brand Name in White for Dark Backgrounds -->
+  <text x="60" y="30" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="26" font-weight="800" fill="#FFFFFF" letter-spacing="-0.5">Vanigam</text>
+
+  <!-- Wordmark: Subtitle in Light Blue for Dark Backgrounds -->
+  <text x="61" y="44" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" fill="#93C5FD" letter-spacing="3.5">COMMERCE</text>
+</svg>

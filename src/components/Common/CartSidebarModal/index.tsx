@@ -25,12 +25,24 @@ const CartSidebarModal = () => {
       }
     }
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && shouldDisplayCart) {
+        handleCartClick();
+      }
+    };
+
     if (shouldDisplayCart) {
       document.addEventListener("mousedown", handleClickOutside);
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
     };
   }, [shouldDisplayCart, handleCartClick]);
 
@@ -43,30 +55,30 @@ const CartSidebarModal = () => {
   return (
     <>
       <div
-        className={`fixed top-0 left-0 z-9999 overflow-y-auto no-scrollbar w-full h-screen bg-dark/70 ease-linear duration-300 ${shouldDisplayCart ? "block" : "hidden"
+        className={`fixed top-0 left-0 z-9999 w-full h-[100dvh] bg-dark/70 backdrop-blur-2xs ease-linear duration-300 ${shouldDisplayCart ? "block" : "hidden"
           }`}
+        onClick={() => handleCartClick()}
       ></div>
 
-      {/* <div className="flex items-center justify-end"> */}
       <div
         className={`${shouldDisplayCart ? "translate-x-0" : "translate-x-full"
-          } fixed z-999999 w-full h-screen max-w-[470px] ease-linear duration-300 shadow-1 bg-white px-4 sm:px-7.5 lg:px-10 top-0 right-0 modal-content flex flex-col`}
+          } fixed z-999999 w-full h-[100dvh] max-w-[470px] ease-linear duration-300 shadow-2xl bg-white px-4 sm:px-7.5 lg:px-10 top-0 right-0 modal-content flex flex-col pb-safe`}
       >
-        <div className="sticky top-0 bg-white flex items-center justify-between pb-7 pt-4 sm:pt-7.5 lg:pt-10 border-b border-gray-3 mb-7.5">
-          <h2 className="text-lg font-medium text-dark sm:text-2xl">
-            Cart View
+        <div className="sticky top-0 bg-white flex items-center justify-between pb-5 pt-4 sm:pt-6 border-b border-gray-3 shrink-0">
+          <h2 className="text-lg font-bold text-dark sm:text-2xl">
+            Shopping Cart
           </h2>
           <button
             onClick={() => handleCartClick()}
-            aria-label="button for close modal"
-            className="flex items-center justify-center duration-150 ease-in text-dark-5 hover:text-dark"
+            aria-label="Close cart modal"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-dark-5 hover:text-dark hover:bg-gray-2 transition-colors"
           >
             <CloseLine />
           </button>
         </div>
 
-        <div className="h-[66vh] overflow-y-auto no-scrollbar">
-          <div className="flex flex-col gap-6">
+        <div className="flex-1 overflow-y-auto no-scrollbar momentum-scroll min-h-0 py-4">
+          <div className="flex flex-col gap-5">
             {/* <!-- cart item --> */}
             {cartCount ? (
               <>
@@ -80,27 +92,27 @@ const CartSidebarModal = () => {
           </div>
         </div>
 
-        <div className="border-t border-gray-3 bg-white pt-5 pb-4 sm:pb-7.5 lg:pb-11 sticky bottom-0 mt-auto">
-          <div className="flex items-center justify-between gap-5 mb-6">
-            <p className="text-base font-normal text-dark-3 ">Subtotal:</p>
+        <div className="border-t border-gray-3 bg-white pt-4 pb-4 sm:pb-6 sticky bottom-0 mt-auto shrink-0">
+          <div className="flex items-center justify-between gap-5 mb-5">
+            <p className="text-sm font-medium text-dark-3">Subtotal:</p>
 
-            <p className="text-xl font-medium text-dark">
+            <p className="text-xl font-extrabold text-dark">
               {totalPrice && formatPrice(totalPrice)}
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Link
               onClick={() => handleCartClick()}
               href="/cart"
-              className="flex justify-center w-full px-6 py-3 text-base font-medium text-white duration-200 ease-out rounded-lg bg-blue hover:bg-blue-dark"
+              className="flex justify-center items-center w-full px-4 py-3 text-xs sm:text-sm font-bold text-dark bg-gray-2 hover:bg-gray-3 duration-150 rounded-xl"
             >
               View Cart
             </Link>
 
             <button
               onClick={() => handleCheckout()}
-              className="flex justify-center w-full px-6 py-3 text-base font-medium text-white duration-200 ease-out rounded-lg bg-dark hover:bg-opacity-95"
+              className="flex justify-center items-center w-full px-4 py-3 text-xs sm:text-sm font-bold text-white bg-blue hover:bg-blue-dark duration-150 rounded-xl shadow-xs"
             >
               Checkout
             </button>

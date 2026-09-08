@@ -560,3 +560,31 @@ input[type="search"]::-webkit-search-results-decoration {
 :is(.swiper-button-prev, .swiper-button-next) svg {
     fill: none !important;
 }
+
+/* Responsive & Cross-Device Utilities */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+@utility pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+@utility pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Touch & Mobile Momentum Scrolling */
+.momentum-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Touch target minimum compliance */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

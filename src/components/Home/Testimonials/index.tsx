@@ -11,7 +11,7 @@ import "swiper/css/navigation";
 
 const BREAKPOINTS = {
   0: { slidesPerView: 1 },
-  1000: { slidesPerView: 2 },
+  768: { slidesPerView: 2 },
   1200: { slidesPerView: 3 },
 } as const;
 
@@ -20,9 +20,9 @@ const Testimonials = () => {
     useTestimonialSwiper();
 
   return (
-    <section className="pb-11.5">
+    <section className="py-12 bg-gray-1/60">
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-8 xl:px-0">
-        <div className="swiper testimonial-carousel common-carousel p-5">
+        <div className="swiper testimonial-carousel common-carousel p-4">
           <TestimonialsHeader
             onPrev={handlePrev}
             onNext={handleNext}
@@ -34,15 +34,11 @@ const Testimonials = () => {
             className="testimonial-swiper"
             ref={sliderRef}
             slidesPerView={3}
-            spaceBetween={20}
+            spaceBetween={24}
             breakpoints={BREAKPOINTS}
             onSlideChange={onSlideChange}
           >
-            {[
-              ...testimonialsData,
-              ...testimonialsData,
-              ...testimonialsData,
-            ].map((item, key) => (
+            {testimonialsData.map((item, key) => (
               <SwiperSlide key={key}>
                 <SingleItem testimonial={item} />
               </SwiperSlide>

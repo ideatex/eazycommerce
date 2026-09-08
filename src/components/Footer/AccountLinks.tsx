@@ -3,35 +3,41 @@ import Link from "next/link";
 const accountLinks = [
   {
     id: 1,
-    label: "Login / Register",
-    href: "/signin",
+    label: "My Account & Orders",
+    href: "/account",
   },
   {
     id: 2,
-    label: "Cart",
-    href: "/cart",
+    label: "Track Shipments",
+    href: "/account?tab=orders",
   },
   {
     id: 3,
+    label: "Returns & Refunds",
+    href: "/account?tab=returns",
+  },
+  {
+    id: 4,
     label: "Wishlist",
     href: "/wishlist",
   },
   {
-    id: 4,
-    label: "Shop",
-    href: "/shop-with-sidebar",
+    id: 5,
+    label: "Verified Stores",
+    href: "/stores",
   },
 ];
+
 export default function AccountLinks() {
   return (
     <div className="w-full sm:w-auto">
-      <h2 className="mb-7.5 text-xl font-semibold text-dark">Account</h2>
+      <h2 className="mb-7.5 text-xl font-semibold text-dark">Customer Account</h2>
 
       <ul className="flex flex-col gap-3.5">
         {accountLinks.map((link) => (
           <li key={link.id}>
             <Link
-              className="text-base duration-200 ease-out hover:text-blue"
+              className="text-base text-gray-600 duration-200 ease-out hover:text-blue"
               href={link.href}
             >
               {link.label}

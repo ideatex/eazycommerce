@@ -2,82 +2,69 @@ import type { MenuItem } from "./types";
 
 export const menuData: MenuItem[] = [
   {
-    title: "Popular",
+    title: "Popular Deals",
     path: "/popular?sort=popular",
   },
   {
-    title: "Shop",
+    title: "Shop All",
     path: "/shop-with-sidebar",
   },
-
   {
-    title: "Pages",
+    title: "Categories",
     submenu: [
       {
-        title: "Shop without sidebar",
-        path: "/shop-without-sidebar",
+        title: "Electronics & Gaming",
+        path: "/categories/electronics",
       },
       {
-        title: "Checkout",
-        path: "/checkout",
+        title: "Computer & Office",
+        path: "/categories/computer",
       },
       {
-        title: "Cart",
-        path: "/cart",
+        title: "Wearables & Smartwatches",
+        path: "/categories/watch",
       },
       {
-        title: "Wishlist",
-        path: "/wishlist",
+        title: "Mobile & Accessories",
+        path: "/categories/mobile",
       },
       {
-        title: "Sign in",
-        path: "/signin",
-      },
-      {
-        title: "Sign up",
-        path: "/signup",
-      },
-      {
-        title: "Error",
-        path: "/error",
-      },
-      {
-        title: "Mail Success",
-        path: "/mail-success",
-      },
-      {
-        title:"Privacy Policy",
-        path:"/privacy-policy"
-      },
-      {
-        title:"Terms & Conditions",
-        path:"/terms-conditions"
-      }
-    ],
-  },
-  {
-    title: "Blog",
-    submenu: [
-      {
-        title: "Blog Grid with Sidebar",
-        path: "/blogs/blog-grid-with-sidebar",
-      },
-      {
-        title: "Blog Grid",
-        path: "/blogs/blog-grid",
-      },
-      {
-        title: "Blog details with sidebar",
-        path: "/blogs/blog-details-with-sidebar",
-      },
-      {
-        title: "Blog Details",
-        path: "/blogs/blog-details",
+        title: "Home Appliances",
+        path: "/categories/appliances",
       },
     ],
   },
   {
-    title: "Contact",
-    path: "/contact",
+    title: "Verified Stores",
+    path: "/stores",
+  },
+  {
+    title: "Help & Support",
+    submenu: [
+      {
+        title: "Track Orders",
+        path: "/account?tab=orders",
+      },
+      {
+        title: "Returns & Refunds",
+        path: "/account?tab=returns",
+      },
+      {
+        title: "Frequently Asked Questions",
+        path: "/faq",
+      },
+      {
+        title: "Contact Support",
+        path: "/contact",
+      },
+      {
+        title: "Privacy Policy",
+        path: "/privacy-policy",
+      },
+      {
+        title: "Terms of Service",
+        path: "/terms-conditions",
+      },
+    ],
   },
 ];

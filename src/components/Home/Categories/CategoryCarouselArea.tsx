@@ -81,17 +81,25 @@ export default function CategoryCarouselArea({
         slidesPerView={6}
         onSlideChange={onSlideChange}
         breakpoints={{
-          // when window width is >= 640px
           0: {
             slidesPerView: 2,
+            spaceBetween: 12,
           },
-          1000: {
+          480: {
+            slidesPerView: 3,
+            spaceBetween: 16,
+          },
+          768: {
             slidesPerView: 4,
-            // spaceBetween: 4,
+            spaceBetween: 20,
           },
-          // when window width is >= 768px
-          1200: {
+          1024: {
+            slidesPerView: 5,
+            spaceBetween: 24,
+          },
+          1280: {
             slidesPerView: 6,
+            spaceBetween: 24,
           },
         }}
       >

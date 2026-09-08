@@ -35,6 +35,17 @@ const MobileMenu = ({ isOpen, onClose, menuData, headerLogo }: MobileMenuProps) 
     };
   }, [isOpen, onClose]);
 
+  // Close on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Prevent body scroll when menu is open
   useEffect(() => {
     if (isOpen) {
@@ -60,15 +71,15 @@ const MobileMenu = ({ isOpen, onClose, menuData, headerLogo }: MobileMenuProps) 
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-dark/50 z-50 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-dark/60 backdrop-blur-2xs z-50 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
       />
 
-      {/* Offcanvas Menu */}
+      {/* Offcanvas Menu with 100dvh and safe area support */}
       <div
-        className={`fixed top-0 right-0 h-full w-[300px] max-w-full bg-white z-50 shadow-xl transform transition-transform duration-300 ease-in-out mobile-menu-container ${
+        className={`fixed top-0 right-0 h-[100dvh] w-[310px] max-w-[85vw] bg-white z-50 shadow-2xl transform transition-transform duration-300 ease-in-out mobile-menu-container flex flex-col pb-safe ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -76,19 +87,20 @@ const MobileMenu = ({ isOpen, onClose, menuData, headerLogo }: MobileMenuProps) 
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-3">
             <div>
-              <Link className="block shrink-0" href="/">
+              <Link className="block shrink-0" href="/" onClick={onClose}>
                 <Image
-                  src={headerLogo || "/images/logo/logo-icon.svg"}
-                  alt="Logo"
-                  width={70}
-                  height={70}
+                  src={headerLogo || "/images/logo/logo.svg"}
+                  alt="Vanigam Commerce"
+                  width={210}
+                  height={52}
+                  className="h-10 sm:h-11 w-auto object-contain"
                   priority
                 />
               </Link>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 hover:text-dark hover:bg-gray-2 focus:outline-none transition-colors"
               aria-label="Close menu"
             >
               <CloseIcon />

@@ -1,6 +1,7 @@
 import { CartItem } from "@/redux/features/cart-slice";
 
-const CART_STORAGE_KEY = "cozycommerce-cart";
+const CART_STORAGE_KEY = "vanigam-cart";
+const LEGACY_CART_STORAGE_KEY = "cozycommerce-cart";
 
 /**
  * Save cart items to localStorage
@@ -28,7 +29,7 @@ export const saveCartToStorage = (items: CartItem[]): void => {
  */
 export const loadCartFromStorage = (): CartItem[] => {
     try {
-        const serializedCart = localStorage.getItem(CART_STORAGE_KEY);
+        const serializedCart = localStorage.getItem(CART_STORAGE_KEY) || localStorage.getItem(LEGACY_CART_STORAGE_KEY);
         if (serializedCart === null) {
             return [];
         }
@@ -48,6 +49,7 @@ export const loadCartFromStorage = (): CartItem[] => {
 export const clearCartStorage = (): void => {
     try {
         localStorage.removeItem(CART_STORAGE_KEY);
+        localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
     } catch (error) {
         if (error instanceof Error) {
             console.error("Failed to clear cart from localStorage:", error.message);

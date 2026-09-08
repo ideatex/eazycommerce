@@ -18,13 +18,7 @@ const nextConfig = {
     ],
   },
   redirects: async () => {
-    return [
-      {
-        source: "/admin",
-        destination: "/admin/dashboard",
-        permanent: true,
-      },
-    ];
+    return [];
   },
   experimental: {
     serverActions: {

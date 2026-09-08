@@ -4,25 +4,25 @@ import Link from 'next/link'
 const socials = [
   {
     id: 1,
-    href: '#',
+    href: 'https://facebook.com',
     name: 'Facebook',
     icon: FacebookIcon,
   },
   {
     id: 2,
-    href: '#',
+    href: 'https://twitter.com',
     name: 'Twitter',
     icon: TwitterIcon,
   },
   {
     id: 3,
-    href: '#',
+    href: 'https://instagram.com',
     name: 'Instagram',
     icon: InstagramIcon,
   },
   {
     id: 4,
-    href: '#',
+    href: 'https://linkedin.com',
     name: 'LinkedIn',
     icon: LinkedInIcon,
   },

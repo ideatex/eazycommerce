@@ -4,7 +4,12 @@ import { unstable_cache } from "next/cache";
 // get all header settings
 export const getHeaderSettings = unstable_cache(
   async () => {
-    return await prisma.headerSetting.findFirst();
+    try {
+      const { getCmsHeaderSettings } = await import("@/services/cmsService");
+      return await getCmsHeaderSettings();
+    } catch {
+      return null;
+    }
   },
   ['header-setting'], { tags: ['header-setting'] }
 );

@@ -15,25 +15,25 @@ export default async function SiteLayout({
 }) {
   const headerSettingData = await getHeaderSettings();
   return (
-    <div>
+    <div className="min-h-screen flex flex-col">
       <PreLoader />
-      <>
-        <Providers>
-          <NextTopLoader
-            color="#3C50E0"
-            crawlSpeed={300}
-            showSpinner={false}
-            shadow="none"
-          />
-          <MainHeader headerData={headerSettingData} />
-          <Breadcrumb />
-          <Toaster position="top-center" reverseOrder={false} />
+      <Providers>
+        <NextTopLoader
+          color="#3C50E0"
+          crawlSpeed={300}
+          showSpinner={false}
+          shadow="none"
+        />
+        <MainHeader headerData={headerSettingData} />
+        <Breadcrumb />
+        <Toaster position="top-center" reverseOrder={false} />
+        <main className="flex-1 w-full">
           {children}
-        </Providers>
+        </main>
+      </Providers>
 
-        <ScrollToTop />
-        <Footer />
-      </>
+      <ScrollToTop />
+      <Footer />
     </div>
   );
 }

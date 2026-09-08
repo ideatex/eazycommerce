@@ -6,3 +6,799 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ==========================================
+// 1. IDENTITY, USER & AUTH (NextAuth compliant)
+// ==========================================
+
+model User {
+  id                  String               @id @default(cuid())
+  name                String?
+  email               String?              @unique
+  emailVerified       DateTime?
+  image               String?
+  password            String?
+  phone               String?
+  accounts            Account[]
+  sessions            Session[]
+  memberships         OrganizationMember[]
+  masterOrders        MasterOrder[]
+  auditLogs           AuditLog[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==========================================
+// 2. MULTI-ORGANIZATION & ROLES (RBAC)
+// ==========================================
+
+enum OrganizationType {
+  PLATFORM
+  MANUFACTURER
+  SUPPLIER
+  BRAND
+  DISTRIBUTOR
+  WHOLESALER
+  DEALER
+  RETAILER
+  SELLER
+  FULFILLMENT_PARTNER
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  PENDING_VERIFICATION
+  SUSPENDED
+  INACTIVE
+}
+
+model Organization {
+  id                      String                     @id @default(cuid())
+  name                    String
+  slug                    String                     @unique
+  legalName               String?
+  organizationType        OrganizationType           @default(SELLER)
+  status                  OrganizationStatus         @default(PENDING_VERIFICATION)
+  email                   String?
+  phone                   String?
+  website                 String?
+  taxIdentificationNumber String?
+  registrationNumber      String?
+  logo                    String?
+  description             String?
+  currency                String                     @default("USD")
+  country                 String                     @default("US")
+  timezone                String                     @default("UTC")
+  addressLine1            String?
+  city                    String?
+  state                   String?
+  postalCode              String?
+  members                 OrganizationMember[]
+  outgoingRelationships   OrganizationRelationship[] @relation("SourceRelationships")
+  incomingRelationships   OrganizationRelationship[] @relation("TargetRelationships")
+  onboardingProgress      OnboardingProgress?
+  roles                   Role[]
+  warehouses              Warehouse[]
+  products                Product[]
+  productOffers           ProductOffer[]
+  priceLists              PriceList[]
+  sellingBusinessOrders   BusinessOrder[]            @relation("SellerOrders")
+  inboundB2BOrders        B2BOrder[]                 @relation("SupplierB2BOrders")
+  outboundB2BOrders       B2BOrder[]                 @relation("BuyerB2BOrders")
+  commissionRules         CommissionRule[]
+  settlements             Settlement[]
+  auditLogs               AuditLog[]
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId         String
+  role           Role         @relation(fields: [roleId], references: [id])
+  status         String       @default("ACTIVE")
+  joinedAt       DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, userId])
+}
+
+enum RelationshipType {
+  SUPPLIES
+  DISTRIBUTES
+  RESELLS
+  AUTHORIZED_SELLER
+  FULFILLS
+  PARTNERS_WITH
+}
+
+enum RelationshipStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  TERMINATED
+}
+
+model OrganizationRelationship {
+  id                   String             @id @default(cuid())
+  sourceOrganizationId String
+  sourceOrganization   Organization       @relation("SourceRelationships", fields: [sourceOrganizationId], references: [id], onDelete: Cascade)
+  targetOrganizationId String
+  targetOrganization   Organization       @relation("TargetRelationships", fields: [targetOrganizationId], references: [id], onDelete: Cascade)
+  relationshipType     RelationshipType
+  status               RelationshipStatus @default(PENDING)
+  metadata             Json?
+  startedAt            DateTime           @default(now())
+  endedAt              DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@unique([sourceOrganizationId, targetOrganizationId, relationshipType])
+}
+
+enum OnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model OnboardingProgress {
+  id             String           @id @default(cuid())
+  organizationId String           @unique
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  currentStep    Int              @default(1)
+  completedSteps Int[]            @default([])
+  status         OnboardingStatus @default(NOT_STARTED)
+  stepData       Json?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model Role {
+  id              String             @id @default(cuid())
+  name            String
+  slug            String
+  description     String?
+  isSystem        Boolean            @default(false)
+  organizationId  String?
+  organization    Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members         OrganizationMember[]
+  rolePermissions RolePermission[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([organizationId, slug])
+}
+
+model Permission {
+  id              String           @id @default(cuid())
+  action          String           @unique
+  name            String
+  description     String?
+  category        String           @default("GENERAL")
+  rolePermissions RolePermission[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+}
+
+// ==========================================
+// 3. CATALOG, MASTER PRODUCT & OFFERS
+// ==========================================
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  title     String
+  slug      String    @unique
+  img       String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Product {
+  id                    String                  @id @default(cuid())
+  title                 String
+  shortDescription      String
+  description           String?
+  price                 Decimal                 @db.Decimal(10, 2)
+  discountedPrice       Decimal?                @db.Decimal(10, 2)
+  slug                  String                  @unique
+  quantity              Int                     @default(0)
+  body                  String?
+  tags                  String[]
+  offers                String[]
+  sku                   String?
+  brand                 String?
+  categoryId            Int?
+  category              Category?               @relation(fields: [categoryId], references: [id])
+  organizationId        String?
+  organization          Organization?           @relation(fields: [organizationId], references: [id])
+  productVariants       ProductVariant[]
+  productOffers         ProductOffer[]
+  reviews               Review[]
+  additionalInformation AdditionalInformation[]
+  customAttributes      CustomAttribute[]
+  heroBanners           HeroBanner[]
+  heroSliders           HeroSlider[]
+  countdowns            Countdown[]
+  orderItems            OrderItem[]
+  b2bOrderItems         B2BOrderItem[]
+  inventoryItems        InventoryItem[]
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+}
+
+model ProductVariant {
+  id             String          @id @default(cuid())
+  color          String
+  image          String
+  size           String
+  sku            String?
+  isDefault      Boolean         @default(false)
+  productId      String
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productOffers  ProductOffer[]
+  priceListItems PriceListItem[]
+  inventoryItems InventoryItem[]
+  orderItems     OrderItem[]
+  b2bOrderItems  B2BOrderItem[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model ProductOffer {
+  id                String          @id @default(cuid())
+  organizationId    String
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  productId         String
+  product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productVariantId  String?
+  productVariant    ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  sellingPrice      Decimal         @db.Decimal(10, 2)
+  costPrice         Decimal?        @db.Decimal(10, 2)
+  wholesalePrice    Decimal?        @db.Decimal(10, 2)
+  minimumQuantity   Int             @default(1)
+  leadTimeDays      Int             @default(1)
+  isAvailable       Boolean         @default(true)
+  isMarketplaceLive Boolean         @default(true)
+  status            String          @default("ACTIVE")
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([organizationId, productId, productVariantId])
+}
+
+// ==========================================
+// 4. MULTI-LEVEL PRICING ENGINE
+// ==========================================
+
+enum PriceListType {
+  RETAIL
+  WHOLESALE
+  DISTRIBUTOR
+  DEALER
+  CONTRACT
+  PROMOTIONAL
+}
+
+model PriceList {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  type           PriceListType   @default(RETAIL)
+  currency       String          @default("USD")
+  isActive       Boolean         @default(true)
+  items          PriceListItem[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model PriceListItem {
+  id               String          @id @default(cuid())
+  priceListId      String
+  priceList        PriceList       @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  minimumQuantity  Int             @default(1)
+  maximumQuantity  Int?
+  unitPrice        Decimal         @db.Decimal(10, 2)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+// ==========================================
+// 5. INVENTORY, WAREHOUSE & TRANSACTIONS
+// ==========================================
+
+model Warehouse {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  code           String
+  addressLine1   String?
+  city           String?
+  country        String          @default("US")
+  isDefault      Boolean         @default(false)
+  inventoryItems InventoryItem[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([organizationId, code])
+}
+
+model InventoryItem {
+  id                   String                 @id @default(cuid())
+  warehouseId          String
+  warehouse            Warehouse              @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  productId            String
+  product              Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productVariantId     String?
+  productVariant       ProductVariant?        @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  quantityOnHand       Int                    @default(0)
+  quantityReserved     Int                    @default(0)
+  quantityAvailable    Int                    @default(0)
+  reorderLevel         Int                    @default(5)
+  transactions         InventoryTransaction[]
+  inventoryReservations InventoryReservation[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@unique([warehouseId, productId, productVariantId])
+}
+
+enum InventoryTransactionType {
+  STOCK_IN
+  STOCK_OUT
+  SALE
+  PURCHASE
+  RETURN
+  ADJUSTMENT
+  TRANSFER
+  RESERVATION
+  RELEASE
+}
+
+model InventoryTransaction {
+  id              String                   @id @default(cuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem            @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  type            InventoryTransactionType
+  quantity        Int
+  previousQty     Int
+  newQty          Int
+  referenceId     String?
+  notes           String?
+  createdAt       DateTime                 @default(now())
+}
+
+model InventoryReservation {
+  id              String        @id @default(cuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  orderId         String
+  quantity        Int
+  expiresAt       DateTime
+  isReleased      Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+}
+
+// ==========================================
+// 6. MASTER ORDER & BUSINESS ORDER SPLITTING
+// ==========================================
+
+enum MasterOrderStatus {
+  CREATED
+  PAYMENT_PENDING
+  PAID
+  PARTIALLY_FULFILLED
+  FULFILLED
+  CANCELLED
+  REFUNDED
+}
+
+enum BusinessOrderStatus {
+  CREATED
+  CONFIRMED
+  PROCESSING
+  PARTIALLY_SHIPPED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+model MasterOrder {
+  id             String            @id @default(cuid())
+  orderNumber    String            @unique
+  userId         String?
+  user           User?             @relation(fields: [userId], references: [id])
+  customerEmail  String
+  customerName   String
+  customerPhone  String?
+  shippingAddress Json
+  billingAddress  Json
+  subtotal       Decimal           @db.Decimal(10, 2)
+  shippingCost   Decimal           @db.Decimal(10, 2) @default(0)
+  discountAmount Decimal           @db.Decimal(10, 2) @default(0)
+  taxAmount      Decimal           @db.Decimal(10, 2) @default(0)
+  totalAmount    Decimal           @db.Decimal(10, 2)
+  currency       String            @default("USD")
+  status         MasterOrderStatus @default(CREATED)
+  paymentStatus  String            @default("PENDING")
+  businessOrders BusinessOrder[]
+  payments       Payment[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model BusinessOrder {
+  id               String              @id @default(cuid())
+  businessOrderNo  String              @unique
+  masterOrderId    String
+  masterOrder      MasterOrder         @relation(fields: [masterOrderId], references: [id], onDelete: Cascade)
+  organizationId   String
+  organization     Organization        @relation("SellerOrders", fields: [organizationId], references: [id])
+  subtotal         Decimal             @db.Decimal(10, 2)
+  shippingCost     Decimal             @db.Decimal(10, 2) @default(0)
+  commissionAmount Decimal             @db.Decimal(10, 2) @default(0)
+  payoutAmount     Decimal             @db.Decimal(10, 2) @default(0)
+  totalAmount      Decimal             @db.Decimal(10, 2)
+  status           BusinessOrderStatus @default(CREATED)
+  orderItems       OrderItem[]
+  fulfillmentOrders FulfillmentOrder[]
+  settlementId     String?
+  settlement       Settlement?         @relation(fields: [settlementId], references: [id])
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
+model OrderItem {
+  id               String          @id @default(cuid())
+  businessOrderId  String
+  businessOrder    BusinessOrder   @relation(fields: [businessOrderId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product         @relation(fields: [productId], references: [id])
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+  productTitle     String
+  variantTitle     String?
+  sku              String?
+  unitPrice        Decimal         @db.Decimal(10, 2)
+  quantity         Int
+  totalPrice       Decimal         @db.Decimal(10, 2)
+  createdAt        DateTime        @default(now())
+}
+
+model FulfillmentOrder {
+  id              String        @id @default(cuid())
+  fulfillmentNo   String        @unique
+  businessOrderId String
+  businessOrder   BusinessOrder @relation(fields: [businessOrderId], references: [id], onDelete: Cascade)
+  status          String        @default("PENDING")
+  carrier         String?
+  trackingNumber  String?
+  trackingUrl     String?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+// ==========================================
+// 7. B2B PURCHASE ORDERS
+// ==========================================
+
+enum B2BOrderStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  PROCESSING
+  PARTIALLY_FULFILLED
+  FULFILLED
+  SHIPPED
+  DELIVERED
+  RECEIVED
+  CANCELLED
+}
+
+model B2BOrder {
+  id                   String         @id @default(cuid())
+  poNumber             String         @unique
+  supplierId           String
+  supplier             Organization   @relation("SupplierB2BOrders", fields: [supplierId], references: [id])
+  buyerId              String
+  buyer                Organization   @relation("BuyerB2BOrders", fields: [buyerId], references: [id])
+  subtotal             Decimal        @db.Decimal(10, 2)
+  taxAmount            Decimal        @db.Decimal(10, 2) @default(0)
+  totalAmount          Decimal        @db.Decimal(10, 2)
+  paymentTerms         String?
+  shippingAddress      Json?
+  status               B2BOrderStatus @default(SUBMITTED)
+  items                B2BOrderItem[]
+  approvedAt           DateTime?
+  fulfilledAt          DateTime?
+  notes                String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}
+
+model B2BOrderItem {
+  id               String          @id @default(cuid())
+  b2bOrderId       String
+  b2bOrder         B2BOrder        @relation(fields: [b2bOrderId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product         @relation(fields: [productId], references: [id])
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+  productTitle     String
+  unitPrice        Decimal         @db.Decimal(10, 2)
+  quantity         Int
+  totalPrice       Decimal         @db.Decimal(10, 2)
+  createdAt        DateTime        @default(now())
+}
+
+// ==========================================
+// 8. PAYMENTS, COMMISSIONS & SETTLEMENTS
+// ==========================================
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model Payment {
+  id            String          @id @default(cuid())
+  masterOrderId String
+  masterOrder   MasterOrder     @relation(fields: [masterOrderId], references: [id], onDelete: Cascade)
+  amount        Decimal         @db.Decimal(10, 2)
+  currency      String          @default("USD")
+  gateway       String          @default("STRIPE")
+  transactionId String?
+  status        PaymentStatus   @default(PENDING)
+  metadata      Json?
+  allocations   PaymentAllocation[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model PaymentAllocation {
+  id             String   @id @default(cuid())
+  paymentId      String
+  payment        Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  organizationId String
+  grossAmount    Decimal  @db.Decimal(10, 2)
+  platformFee    Decimal  @db.Decimal(10, 2) @default(0)
+  netAmount      Decimal  @db.Decimal(10, 2)
+  createdAt      DateTime @default(now())
+}
+
+enum CommissionType {
+  PERCENTAGE
+  FIXED
+  HYBRID
+}
+
+model CommissionRule {
+  id              String         @id @default(cuid())
+  organizationId  String?
+  organization    Organization?  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  type            CommissionType @default(PERCENTAGE)
+  percentageRate  Decimal        @default(10) @db.Decimal(5, 2)
+  fixedFee        Decimal        @default(0) @db.Decimal(10, 2)
+  categorySlug    String?
+  priority        Int            @default(1)
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+enum SettlementStatus {
+  PENDING
+  ON_HOLD
+  ELIGIBLE
+  PROCESSING
+  PAID
+  FAILED
+  REVERSED
+}
+
+model Settlement {
+  id             String           @id @default(cuid())
+  settlementNo   String           @unique
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  grossSales     Decimal          @db.Decimal(10, 2)
+  commissionFee  Decimal          @db.Decimal(10, 2)
+  refundDeductions Decimal        @db.Decimal(10, 2) @default(0)
+  netPayout      Decimal          @db.Decimal(10, 2)
+  status         SettlementStatus @default(PENDING)
+  payoutDate     DateTime?
+  businessOrders BusinessOrder[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+// ==========================================
+// 9. AUDIT LOGGING
+// ==========================================
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  action         String
+  resource       String
+  resourceId     String?
+  details        Json?
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  ipAddress      String?
+  createdAt      DateTime      @default(now())
+}
+
+// ==========================================
+// 10. PRESERVED EXISTING STOREFRONT MODELS
+// ==========================================
+
+model AdditionalInformation {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CustomAttribute {
+  id              String           @id @default(cuid())
+  attributeName   String
+  productId       String
+  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeValues AttributeValue[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model AttributeValue {
+  id                String          @id @default(cuid())
+  title             String
+  customAttributeId String
+  customAttribute   CustomAttribute @relation(fields: [customAttributeId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  name        String?
+  comment     String?
+  email       String?
+  ratings     Float    @default(5)
+  productSlug String
+  isApproved  Boolean  @default(false)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SeoSetting {
+  id              Int      @id @default(autoincrement())
+  siteName        String?
+  siteTitle       String?
+  metadescription String?
+  metaKeywords    String?
+  metaImage       String?
+  favicon         String?
+  gtmId           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model HeaderSetting {
+  id         Int      @id @default(autoincrement())
+  headerText String?
+  headerLogo String?
+  emailLogo  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model HeroBanner {
+  id          Int      @id @default(autoincrement())
+  bannerName  String?
+  subtitle    String?
+  bannerImage String
+  slug        String?
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model HeroSlider {
+  id           Int      @id @default(autoincrement())
+  sliderName   String
+  sliderImage  String
+  discountRate Int
+  slug         String?
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Countdown {
+  id             Int      @id @default(autoincrement())
+  title          String
+  subtitle       String?
+  countdownImage String
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

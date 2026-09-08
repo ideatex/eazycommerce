@@ -34,7 +34,7 @@ export const CountdownTimer = () => {
   }, []);
 
   return (
-    <div className="flex flex-wrap gap-6 mt-6">
+    <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 lg:gap-6 mt-6">
       <TimeDisplay value={date.days} label="Days" />
       <TimeDisplay value={date.hours} label="Hours" />
       <TimeDisplay value={date.minutes} label="Minutes" />

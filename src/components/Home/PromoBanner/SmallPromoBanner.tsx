@@ -57,7 +57,7 @@ export default function SmallPromoBanner({
         alt="promo img"
         className={`absolute top-1/2 -translate-y-1/2 ${
           rightAlign ? "left-3 sm:left-10" : "right-3 sm:right-8.5"
-        } -z-1`}
+        } -z-1 max-w-[35vw] sm:max-w-[214px] max-h-[160px] sm:max-h-[240px] w-auto h-auto object-contain opacity-25 sm:opacity-100 transition-opacity`}
         width={214}
         height={260}
       />

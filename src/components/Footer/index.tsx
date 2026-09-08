@@ -6,6 +6,7 @@ import {
   TwitterIcon,
 } from "@/assets/icons/social";
 import Link from "next/link";
+import Image from "next/image";
 import AccountLinks from "./AccountLinks";
 import FooterBottom from "./FooterBottom";
 import { AppStoreIcon, GooglePlayIcon } from "./icons";
@@ -18,7 +19,17 @@ const Footer = () => {
         {/* <!-- footer menu start --> */}
         <div className="flex flex-wrap xl:flex-nowrap gap-10 xl:gap-19 xl:justify-between pt-17.5 xl:pt-22.5 pb-10 xl:pb-20">
           <div className="max-w-[330px] w-full">
-            <h2 className="mb-7.5 text-xl font-semibold text-dark">
+            <Link href="/" className="inline-block mb-6">
+              <Image
+                src="/images/logo/logo.svg"
+                alt="Vanigam Commerce"
+                width={210}
+                height={52}
+                className="h-11 sm:h-13 w-auto object-contain"
+              />
+            </Link>
+
+            <h2 className="mb-4 text-base font-bold text-dark">
               Help & Support
             </h2>
 

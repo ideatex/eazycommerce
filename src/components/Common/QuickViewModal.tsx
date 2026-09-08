@@ -138,83 +138,105 @@ const QuickViewModal = () => {
     }
   }, [product?.slug]);
 
+  // Body scroll lock and Escape key listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isModalOpen) {
+        closeModal();
+      }
+    };
+    if (isModalOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isModalOpen, closeModal]);
+
   return (
     <>
       {product?.title && (
         <div
-          className={`${isModalOpen ? "z-99999" : "hidden"
-            } fixed top-0 left-0 o overflow-y-scroll no-scrollbar max-h-[100vh] w-full sm:py-20 xl:py-25 2xl:py-[230px] bg-dark/70 sm:px-8 px-4 py-5`}
+          className={`${
+            isModalOpen ? "fixed" : "hidden"
+          } inset-0 z-99999 overflow-y-auto momentum-scroll bg-dark/70 backdrop-blur-2xs flex items-center justify-center p-3 sm:p-6 lg:p-8`}
         >
-          <div className="flex items-center justify-center ">
-            <div className="w-full max-w-[1100px] rounded-xl shadow-3 bg-white p-7.5 relative modal-content">
-              <button
-                onClick={() => closeModal()}
-                className="absolute top-0 right-0 flex items-center justify-center duration-150 ease-in rounded-full sm:top-6 sm:right-6 text-body hover:text-dark"
-              >
-                <span className="sr-only">Close modal</span>
-                <CloseLine />
-              </button>
+          <div className="w-full max-w-[1100px] rounded-2xl sm:rounded-3xl shadow-2xl bg-white p-4 sm:p-7.5 lg:p-10 relative modal-content my-auto max-h-[90dvh] overflow-y-auto momentum-scroll">
+            <button
+              onClick={() => closeModal()}
+              className="absolute top-3 right-3 sm:top-5 sm:right-5 w-10 h-10 rounded-full flex items-center justify-center bg-gray-2 text-dark-5 hover:text-dark hover:bg-gray-3 transition-colors z-20"
+              aria-label="Close modal"
+            >
+              <CloseLine />
+            </button>
 
-              <div className="flex flex-wrap items-center gap-12.5">
-                <div className="max-w-[526px] w-full">
-                  <div className="flex gap-5">
-                    <div className="flex flex-col gap-5">
-                      {product?.productVariants?.map((thumb, key: number) => (
-                        <button
-                          onClick={() => setActivePreview(key)}
-                          key={key}
-                          className={`flex items-center justify-center w-20 h-20 overflow-hidden rounded-lg bg-gray-1 ease-out duration-200 hover:border-2 hover:border-blue ${activePreview === key && "border-2 border-blue"
-                            }`}
-                        >
-                          <Image
-                            src={thumb.image}
-                            alt="thumbnail"
-                            width={61}
-                            height={61}
-                            className="aspect-square"
-                          />
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="relative z-1 overflow-hidden flex items-center justify-center w-full sm:min-h-[508px] bg-gray-1 rounded-lg border border-gray-3">
-                      <div>
-                        <button
-                          onClick={handlePreviewSlider}
-                          className="absolute z-50 flex items-center justify-center w-10 h-10 duration-200 ease-out bg-white rounded-lg gallery__Image shadow-1 text-dark hover:text-blue top-4 lg:top-8 right-4 lg:right-8"
-                        >
-                          <span className="sr-only">Fullscreen</span>
-                          <FullScreenIcon />
-                        </button>
-
-                        <Image
-                          src={
-                            product?.productVariants?.[activePreview]?.image
-                              ? product.productVariants[activePreview].image
-                              : ""
-                          }
-                          alt="products-details"
-                          width={400}
-                          height={400}
-                        />
-                      </div>
-                    </div>
-                  </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center">
+              {/* Gallery Left */}
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
+                {/* Thumbnails */}
+                <div className="flex sm:flex-col gap-2.5 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0">
+                  {product?.productVariants?.map((thumb, key: number) => (
+                    <button
+                      onClick={() => setActivePreview(key)}
+                      key={key}
+                      className={`flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 overflow-hidden rounded-xl bg-gray-1 shrink-0 ease-out duration-200 border-2 ${
+                        activePreview === key ? "border-blue ring-2 ring-blue/20" : "border-gray-3 hover:border-gray-4"
+                      }`}
+                    >
+                      <Image
+                        src={thumb.image}
+                        alt="thumbnail"
+                        width={61}
+                        height={61}
+                        className="w-full h-full object-contain p-1"
+                      />
+                    </button>
+                  ))}
                 </div>
 
-                <div className="max-w-[445px] w-full">
-                  {product.discountedPrice &&
-                    product.discountedPrice < product.price && (
-                      <span className="inline-block text-custom-xs uppercase rounded-full font-medium text-white py-1 px-3 bg-green mb-6.5">
-                        sale {""}
-                        {Math.round(
-                          ((product.price - product.discountedPrice) /
-                            product.price) *
-                          100
-                        )}
-                        % OFF
-                      </span>
-                    )}
+                {/* Main Preview */}
+                <div className="relative z-1 overflow-hidden flex items-center justify-center w-full min-h-[260px] sm:min-h-[420px] bg-gray-1 rounded-2xl border border-gray-3 p-4">
+                  <button
+                    onClick={handlePreviewSlider}
+                    className="absolute z-10 flex items-center justify-center w-10 h-10 duration-200 ease-out bg-white rounded-xl shadow-sm border border-gray-2 text-dark hover:text-blue top-3 right-3"
+                    title="Fullscreen"
+                  >
+                    <span className="sr-only">Fullscreen</span>
+                    <FullScreenIcon />
+                  </button>
+
+                  <Image
+                    src={
+                      product?.productVariants?.[activePreview]?.image
+                        ? product.productVariants[activePreview].image
+                        : ""
+                    }
+                    alt="products-details"
+                    width={400}
+                    height={400}
+                    className="max-h-[340px] w-auto object-contain"
+                  />
+                </div>
+              </div>
+
+              {/* Product Info Right */}
+              <div className="w-full">
+                {product.discountedPrice &&
+                  product.discountedPrice < product.price && (
+                    <span className="inline-block text-custom-xs uppercase rounded-full font-bold text-white py-1 px-3 bg-green mb-4">
+                      sale {""}
+                      {Math.round(
+                        ((product.price - product.discountedPrice) /
+                          product.price) *
+                        100
+                      )}
+                      % OFF
+                    </span>
+                  )}
 
                   <h3 className="mb-4 text-xl font-semibold xl:text-heading-5 text-dark">
                     {product.title}
@@ -335,10 +357,9 @@ const QuickViewModal = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </>
-  );
-};
+        )}
+      </>
+    );
+  };
 
 export default QuickViewModal;

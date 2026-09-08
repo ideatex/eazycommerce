@@ -58,12 +58,13 @@ const HeroCarousal = ({ sliders }: { sliders: any }) => {
               </Link>
             </div>
 
-            <div>
+            <div className="flex items-center justify-center p-4 w-full sm:w-auto shrink-0">
               <Image
-                src={slider?.sliderImage ? slider?.sliderImage! : "/no image"}
-                alt="headphone"
+                src={slider?.sliderImage ? slider?.sliderImage! : "/images/products/product-1-bg-1.png"}
+                alt={slider?.product?.title || "Featured Product"}
                 width={320}
                 height={400}
+                className="max-h-[220px] sm:max-h-[340px] lg:max-h-[380px] w-auto max-w-[80vw] sm:max-w-[320px] object-contain mx-auto"
                 loading="eager"
               />
             </div>
