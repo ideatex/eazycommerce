@@ -16,7 +16,8 @@
     "test:db": "node scripts/test-db-server.mjs",
     "db:push": "prisma db push",
     "db:seed": "node --env-file=.env prisma/seed.js",
-    "db:local": "node scripts/local-db.mjs"
+    "db:local": "node scripts/local-db.mjs",
+    "dev:all": "node scripts/dev-all.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

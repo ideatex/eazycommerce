@@ -50,3 +50,5 @@ next-env.d.ts
 # local dev database
 .local-db
 .env.bak-*
+
+.env*

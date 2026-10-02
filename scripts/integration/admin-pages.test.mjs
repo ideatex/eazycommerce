@@ -89,3 +89,53 @@ test("audit log records admin actions with the actor", async () => {
   const page = (await admin.html("/admin/audit")).text;
   assert.ok(page.includes("CATEGORY_CREATED"));
 });
+
+test("dashboard widgets show real, tenant-scoped numbers", async () => {
+  const buyer = await customerClient("dashw");
+  const { product, variant } = await createProduct(admin, { title: `DashW ${Date.now()}`, basePrice: 500, stock: 4 });
+  const placed = await placeOrder(buyer, [{ variantId: variant.id, quantity: 2 }]);
+  assert.equal(placed.status, 201);
+
+  const html = (await admin.html("/admin")).text.replace(/<!-- -->/g, "");
+  for (const label of ["Revenue, last 7 days", "Orders by status", "Top products", "Low stock", "Reviews awaiting approval", "Customers", "Catalogue"]) {
+    assert.ok(html.includes(label), `widget "${label}" is present`);
+  }
+
+  // revenue widget = non-cancelled orders in the last 7 days
+  const since = new Date(Date.now() - 8 * 86400000);
+  const live = await prisma.order.findMany({ where: { businessId, createdAt: { gte: since }, status: { notIn: ["CANCELLED", "REFUNDED"] } } });
+  const total = live.reduce((a, o) => a + o.grandTotal, 0);
+  assert.ok(html.includes(`₹${Math.round(total).toLocaleString("en-IN")}`), "7-day revenue matches the database");
+
+  // status widget links to the filtered order list
+  assert.ok(html.includes("/admin/orders?status=PENDING"));
+  // low stock widget shows the lowest-stock variants with their available (stock - reserved) units
+  const lowest = await prisma.productVariant.findMany({ where: { stock: { lte: 15 }, product: { businessId } }, include: { product: true }, orderBy: { stock: "asc" }, take: 5 });
+  assert.ok(lowest.length > 0);
+  for (const v of lowest) assert.ok(html.includes(v.product.title), `low-stock item "${v.product.title}" listed`);
+  const first = lowest[0];
+  const avail = first.stock - first.reservedStock;
+  assert.ok(html.includes(avail <= 0 ? "Out of stock" : `${avail} left`));
+  assert.ok(product.id);
+
+  // customers KPI = customers in this business
+  const customers = await prisma.user.count({ where: { businessId, role: { in: ["CUSTOMER", "B2B"] } } });
+  assert.ok(html.includes(customers.toLocaleString("en-IN")));
+
+  // a cancelled order drops out of revenue
+  await admin.api(`/api/orders/${placed.body.data.orderNumber}/status`, { method: "POST", json: { status: "CANCELLED" } });
+  const after = (await prisma.order.findMany({ where: { businessId, createdAt: { gte: since }, status: { notIn: ["CANCELLED", "REFUNDED"] } } })).reduce((a, o) => a + o.grandTotal, 0);
+  assert.ok(after < total);
+  assert.ok((await admin.html("/admin")).text.replace(/<!-- -->/g, "").includes(`₹${Math.round(after).toLocaleString("en-IN")}`));
+});
+
+test("pending reviews widget lists unapproved reviews and counts them", async () => {
+  const buyer = await customerClient("dashrev");
+  const { product } = await createProduct(admin, { stock: 3 });
+  const comment = `Dash review ${Date.now()}`;
+  assert.equal((await buyer.api("/api/reviews", { method: "POST", json: { productId: product.id, rating: 4, comment } })).status, 201);
+  const html = (await admin.html("/admin")).text.replace(/<!-- -->/g, "");
+  assert.ok(html.includes(comment));
+  const pending = await prisma.productReview.count({ where: { isApproved: false, product: { businessId } } });
+  assert.ok(html.includes(`${pending} pending`));
+});

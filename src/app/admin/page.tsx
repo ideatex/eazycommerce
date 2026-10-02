@@ -19,6 +19,14 @@ import {
 import db from '@/lib/db';
 import { requireAdminScope } from '@/lib/adminScope';
 import { Button, Badge, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
+import {
+  KpiCard,
+  RevenueChart,
+  OrderStatusWidget,
+  TopProductsWidget,
+  LowStockWidget,
+  PendingReviewsWidget,
+} from './DashboardWidgets';
 
 export default async function AdminDashboardPage() {
   const { businessId } = await requireAdminScope();
@@ -52,6 +60,7 @@ export default async function AdminDashboardPage() {
     db.productVariant.findMany({
       where: { stock: { lte: 15 }, product: { businessId } },
       include: { product: true },
+      orderBy: { stock: 'asc' },
       take: 5,
     }),
     db.order.count({
@@ -63,6 +72,63 @@ export default async function AdminDashboardPage() {
     where: { businessId },
     select: { grandTotal: true, taxTotal: true },
   });
+
+  const TZ = 'Asia/Kolkata';
+  const DAY = 24 * 60 * 60 * 1000;
+  const dayKey = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: TZ });
+  const live = { notIn: ['CANCELLED', 'REFUNDED'] };
+  const [
+    customerCount,
+    newCustomers,
+    productStatus,
+    statusGroups,
+    recentRevenueOrders,
+    topItems,
+    pendingReviewCount,
+    pendingReviews,
+  ] = await Promise.all([
+    db.user.count({ where: { businessId, role: { in: ['CUSTOMER', 'B2B'] } } }),
+    db.user.count({ where: { businessId, role: { in: ['CUSTOMER', 'B2B'] }, createdAt: { gte: new Date(Date.now() - 7 * DAY) } } }),
+    db.product.groupBy({ by: ['status'], where: { businessId }, _count: { _all: true } }),
+    db.order.groupBy({ by: ['status'], where: { businessId }, _count: { _all: true } }),
+    db.order.findMany({
+      where: { businessId, status: live, createdAt: { gte: new Date(Date.now() - 8 * DAY) } },
+      select: { createdAt: true, grandTotal: true },
+    }),
+    db.orderItem.groupBy({
+      by: ['title'],
+      where: { order: { businessId, status: live, createdAt: { gte: new Date(Date.now() - 30 * DAY) } } },
+      _sum: { quantity: true, totalPrice: true },
+      orderBy: { _sum: { totalPrice: 'desc' } },
+      take: 5,
+    }),
+    db.productReview.count({ where: { isApproved: false, product: { businessId } } }),
+    db.productReview.findMany({
+      where: { isApproved: false, product: { businessId } },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      include: { product: { select: { title: true } } },
+    }),
+  ]);
+
+  // Last 7 calendar days (store timezone), oldest first.
+  const revenueDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(Date.now() - (6 - i) * DAY);
+    return { key: dayKey(d), label: d.toLocaleDateString('en-IN', { weekday: 'short', timeZone: TZ }), revenue: 0, orders: 0 };
+  });
+  for (const o of recentRevenueOrders) {
+    const day = revenueDays.find((x) => x.key === dayKey(o.createdAt));
+    if (day) {
+      day.revenue += o.grandTotal;
+      day.orders += 1;
+    }
+  }
+
+  const STATUS_ORDER = ['PENDING', 'CONFIRMED', 'PROCESSING', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED', 'RETURNED', 'REFUNDED'];
+  const statusCounts = statusGroups
+    .map((g) => ({ status: g.status, count: g._count._all }))
+    .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
+  const productCount = (status: string) => productStatus.find((p) => p.status === status)?._count._all ?? 0;
 
   const totalRevenue = allOrders.reduce((acc, o) => acc + o.grandTotal, 0);
   const totalTax = allOrders.reduce((acc, o) => acc + o.taxTotal, 0);
@@ -212,17 +278,43 @@ export default async function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <span className="text-xs text-neutral-500 block mb-1 font-medium">B2B Accounts</span>
-            <div className="text-2xl font-bold text-neutral-900 font-mono-numeric">
-              {b2bProfiles.length} Accounts
-            </div>
-            <span className="text-[11px] text-neutral-400 block mt-1">
-              Corporate B2B credit lines
-            </span>
-          </CardContent>
-        </Card>
+        <KpiCard
+          label="Customers"
+          value={customerCount.toLocaleString('en-IN')}
+          sub={`+${newCustomers} this week · ${b2bProfiles.length} B2B ${b2bProfiles.length === 1 ? 'account' : 'accounts'}`}
+        />
+
+        <KpiCard
+          label="Catalogue"
+          value={`${productCount('PUBLISHED')} live`}
+          sub={`${productCount('DRAFT')} draft · ${productCount('ARCHIVED')} archived · ${totalProducts} total`}
+        />
+      </div>
+
+      {/* Sales trend and order pipeline */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-stretch">
+        <RevenueChart days={revenueDays} />
+        <OrderStatusWidget counts={statusCounts} />
+      </div>
+
+      {/* Catalogue and moderation widgets */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-stretch">
+        <TopProductsWidget
+          items={topItems.map((t) => ({ title: t.title, quantity: t._sum.quantity ?? 0, revenue: t._sum.totalPrice ?? 0 }))}
+        />
+        <LowStockWidget
+          items={lowStockVariants.map((v) => ({
+            id: v.id,
+            title: v.product.title,
+            variant: v.title,
+            sku: v.sku,
+            available: v.stock - v.reservedStock,
+          }))}
+        />
+        <PendingReviewsWidget
+          count={pendingReviewCount}
+          latest={pendingReviews.map((r) => ({ id: r.id, rating: r.rating, comment: r.comment, product: r.product.title }))}
+        />
       </div>
 
       {/* Main Grid: Orders Table & Activity Timeline */}
