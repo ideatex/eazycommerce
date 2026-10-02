@@ -4,6 +4,7 @@ import fs from "fs/promises";
 import crypto from "crypto";
 import { AuthEngine, ApiError } from "@/lib/auth";
 import { handle, ok } from "@/lib/api";
+import { uploadToCloudinary, cloudinaryConfigured } from "@/lib/cloudinaryUpload";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_FILES = 12;
@@ -20,7 +21,7 @@ function sniffImage(buf: Buffer): { ext: string; mime: string } | null {
 }
 
 /**
- * Admin-only product image upload. Accepts one or many files under the `files`
+ * Admin-only product image upload (Cloudinary when configured, otherwise public/uploads for local use). Accepts one or many files under the `files`
  * (or legacy `file`) field. SVG is rejected: it can carry scripts and would be
  * served from the site's own origin.
  */
@@ -35,8 +36,17 @@ export async function POST(request: NextRequest) {
     if (files.length === 0) throw new ApiError(400, "VALIDATION", "No image file provided.");
     if (files.length > MAX_FILES) throw new ApiError(400, "VALIDATION", `Upload at most ${MAX_FILES} images at a time.`);
 
+    const useCloud = cloudinaryConfigured();
+    // Hosted platforms (Vercel) have a read-only filesystem: without cloud storage uploads cannot work.
+    if (!useCloud && process.env.VERCEL) {
+      throw new ApiError(
+        501,
+        "STORAGE_NOT_CONFIGURED",
+        "Image upload needs cloud storage on this host. Set CLOUDINARY_URL in the environment, or paste an image URL instead."
+      );
+    }
     const targetDir = path.join(process.cwd(), "public", "uploads", "products");
-    await fs.mkdir(targetDir, { recursive: true });
+    if (!useCloud) await fs.mkdir(targetDir, { recursive: true });
 
     const urls: string[] = [];
     for (const file of files) {
@@ -47,8 +57,12 @@ export async function POST(request: NextRequest) {
         throw new ApiError(400, "VALIDATION", `${file.name} is not a supported image. Use JPG, PNG, WEBP, GIF or AVIF.`);
       }
       const name = `product_${Date.now()}_${crypto.randomBytes(6).toString("hex")}${type.ext}`;
-      await fs.writeFile(path.join(targetDir, name), buffer);
-      urls.push(`/uploads/products/${name}`);
+      if (useCloud) {
+        urls.push(await uploadToCloudinary(buffer, name.replace(type.ext, "")));
+      } else {
+        await fs.writeFile(path.join(targetDir, name), buffer);
+        urls.push(`/uploads/products/${name}`);
+      }
     }
 
     // `url` is kept for the legacy single-file caller.

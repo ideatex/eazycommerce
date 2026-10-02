@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prismaDB";
+import { cachedSetting } from "@/lib/cachedQuery";
 
-/** Header branding. Falls back to the bundled logo when no custom header is stored. */
-export async function getHeaderSettings() {
-  try {
+/** Header branding. Falls back to the bundled logo when no custom header is stored or the database is unreachable. */
+export const getHeaderSettings = cachedSetting(
+  "header-setting",
+  async () => {
     const setting = await prisma.headerSetting.findFirst();
     return {
       id: setting?.id ?? 0,
@@ -12,9 +14,6 @@ export async function getHeaderSettings() {
       createdAt: setting?.createdAt ?? new Date(0),
       updatedAt: setting?.updatedAt ?? new Date(0),
     };
-  } catch (err) {
-    // Branding is cosmetic: render the page with the default logo rather than failing it.
-    console.error("[header-setting] could not load header settings:", err);
-    return null;
-  }
-}
+  },
+  null
+);
