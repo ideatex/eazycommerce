@@ -2,14 +2,14 @@
 
 import { useState, useMemo } from "react";
 import ProductItem from "@/components/Common/ProductItem";
-import { mockProducts } from "@/data/mockProducts";
+import type { StoreProduct } from "@/types/storefront";
 
-export default function ShopWithoutSidebarContent() {
+export default function ShopWithoutSidebarContent({ products }: { products: StoreProduct[] }) {
   const [sortBy, setSortBy] = useState("default");
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredProducts = useMemo(() => {
-    return mockProducts.filter((p) => {
+    return products.filter((p) => {
       if (
         searchQuery &&
         !p.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -19,8 +19,8 @@ export default function ShopWithoutSidebarContent() {
       }
       return true;
     }).sort((a, b) => {
-      const priceA = a.discountedPrice || a.price;
-      const priceB = b.discountedPrice || b.price;
+      const priceA = a.sellingPrice;
+      const priceB = b.sellingPrice;
 
       if (sortBy === "price-low") return priceA - priceB;
       if (sortBy === "price-high") return priceB - priceA;
@@ -28,7 +28,7 @@ export default function ShopWithoutSidebarContent() {
       if (sortBy === "rating") return b.rating - a.rating;
       return 0;
     });
-  }, [sortBy, searchQuery]);
+  }, [products, sortBy, searchQuery]);
 
   return (
     <section className="pb-20 pt-10 bg-gray-1 min-h-screen">

@@ -1,11 +1,18 @@
 import { Metadata } from "next";
 import ShopWithSidebarContent from "@/components/Shop/ShopWithSidebarContent";
+import { getStorefrontCategories, getStorefrontProducts } from "@/lib/storefront";
 
 export const metadata: Metadata = {
   title: "Popular Products | VANIGAM",
-  description: "Browse our most popular and highest rated e-commerce items.",
+  description: "Our most reviewed and highest rated products.",
 };
 
-export default function PopularPage() {
-  return <ShopWithSidebarContent initialSort="popular" />;
+export default async function PopularPage() {
+  const [products, categories] = await Promise.all([
+    getStorefrontProducts({ sort: "popular" }),
+    getStorefrontCategories(),
+  ]);
+  return (
+    <ShopWithSidebarContent products={products} categories={categories} initialSort="popular" />
+  );
 }

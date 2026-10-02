@@ -43,3 +43,10 @@ next-env.d.ts
 
 
 .env
+
+# integration-test build output
+.next-test
+
+# local dev database
+.local-db
+.env.bak-*

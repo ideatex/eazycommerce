@@ -13,7 +13,8 @@ export default function CartHydration() {
 
     useEffect(() => {
         // Load cart from localStorage only on client-side after hydration
-        const savedCart = loadCartFromStorage();
+        // Carts saved before the catalogue went live lack variant ids and cannot be ordered.
+        const savedCart = loadCartFromStorage().filter((item) => !!item.variantId);
         if (savedCart.length > 0) {
             dispatch(loadCartFromStorageAction(savedCart));
         }

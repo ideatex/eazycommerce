@@ -1,62 +1,57 @@
 import { WishlistItem } from '@/types/wishlistItem';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import toast from 'react-hot-toast';
 
-// Load wishlist items from local storage if available
-let initialItemsState: WishlistItem[] = [];
+export const WISHLIST_STORAGE_KEY = 'wishlistItems';
 
+/** Saves the list; storage can be unavailable (private mode, quota), which must never break the UI. */
+function persist(items: WishlistItem[]) {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(items));
+    }
+  } catch {
+    // Wishlist still works for this session.
+  }
+}
+
+/** Reads and validates the saved list. Anything malformed is ignored. */
+export function loadWishlistFromStorage(): WishlistItem[] {
+  try {
+    const raw = localStorage.getItem(WISHLIST_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (i): i is WishlistItem =>
+        i && typeof i === 'object' && typeof i.id === 'string' && typeof i.title === 'string' && typeof i.price === 'number'
+    );
+  } catch {
+    return [];
+  }
+}
+
+// Reducers are pure: user feedback (toasts) is shown by the components that dispatch.
 export const wishlist = createSlice({
   name: 'wishlist',
-  initialState: { items: initialItemsState },
+  initialState: { items: [] as WishlistItem[] },
   reducers: {
     setWishlistItems: (state, action: PayloadAction<WishlistItem[]>) => {
       state.items = action.payload;
     },
+    /** Adds the product if it is not already saved; saving twice is a no-op. */
     addItemToWishlist: (state, action: PayloadAction<WishlistItem>) => {
-      const {
-        id,
-        title,
-        price,
-        slug,
-        image,
-        quantity,
-        color
-      } = action.payload;
-      const existingItem = state.items.find((item) => item.id === id);
-
-      if (existingItem) {
-        state.items = state.items.filter((item) => item.id !== id);
-        toast.error('Product removed from wishlist!');
-        return;
-      } else {
-        state.items.push({
-          id,
-          title,
-          slug,
-          image,
-          price,
-          quantity,
-          color
-        });
-
-        if (typeof window !== 'undefined' && window.localStorage) {
-          localStorage.setItem('wishlistItems', JSON.stringify(state.items));
-        }
-        toast.success('Product added to wishlist!');
-      }
+      const { id, title, price, slug, image, quantity, color } = action.payload;
+      if (state.items.some((item) => item.id === id)) return;
+      state.items.push({ id, title, slug, image, price, quantity, color });
+      persist(state.items);
     },
     removeItemFromWishlist: (state, action: PayloadAction<string>) => {
-      const itemId = action.payload;
-      state.items = state.items.filter((item) => item.id !== itemId);
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem('wishlistItems', JSON.stringify(state.items));
-      }
+      state.items = state.items.filter((item) => item.id !== action.payload);
+      persist(state.items);
     },
     removeAllItemsFromWishlist: (state) => {
       state.items = [];
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem('wishlistItems', JSON.stringify(state.items));
-      }
+      persist(state.items);
     },
   },
 });
@@ -65,6 +60,6 @@ export const {
   addItemToWishlist,
   removeItemFromWishlist,
   removeAllItemsFromWishlist,
-  setWishlistItems
+  setWishlistItems,
 } = wishlist.actions;
 export default wishlist.reducer;

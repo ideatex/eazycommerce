@@ -1,4 +1,6 @@
 import React from "react";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/commerce";
+import { formatPrice } from "@/utils/formatePrice";
 
 export interface TrustFeaturesBarProps {
   className?: string;
@@ -17,7 +19,7 @@ export const TrustFeaturesBar: React.FC<TrustFeaturesBarProps> = ({
         </svg>
       ),
       title: "Free Fast Shipping",
-      description: "Direct partner dispatch on orders over $100",
+      description: `Free shipping on orders over ${formatPrice(FREE_SHIPPING_THRESHOLD)}`,
     },
     {
       icon: (
@@ -25,8 +27,8 @@ export const TrustFeaturesBar: React.FC<TrustFeaturesBarProps> = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
         </svg>
       ),
-      title: "100% Verified Partners",
-      description: "Every seller vetted with valid business KYC",
+      title: "Quality Assured",
+      description: "Every product checked before it ships",
     },
     {
       icon: (

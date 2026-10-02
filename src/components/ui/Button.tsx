@@ -1,15 +1,21 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "outline" | "ghost" | "destructive" | "link";
   size?: "sm" | "md" | "lg" | "icon";
   isLoading?: boolean;
+  /** Renders a link styled as a button. */
+  href?: string;
+  target?: string;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = "", variant = "primary", size = "md", isLoading, children, disabled, ...props }, ref) => {
+  ({ className = "", variant = "primary", size = "md", isLoading, children, disabled, href, target, leftIcon, rightIcon, ...props }, ref) => {
     const baseStyles =
       "inline-flex items-center justify-center font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/30 disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer rounded-xl";
 
@@ -29,11 +35,28 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       icon: "p-2.5",
     };
 
+    const classes = `${baseStyles} ${variantStyles[variant]} ${variant !== "link" ? sizeStyles[size] : ""} ${className}`;
+
+    if (href && !disabled) {
+      return (
+        <Link
+          href={href}
+          target={target}
+          rel={target === "_blank" ? "noopener noreferrer" : undefined}
+          className={classes}
+        >
+          {leftIcon && <span className="mr-1.5 inline-flex">{leftIcon}</span>}
+          {children}
+          {rightIcon && <span className="ml-1.5 inline-flex">{rightIcon}</span>}
+        </Link>
+      );
+    }
+
     return (
       <button
         ref={ref}
         disabled={disabled || isLoading}
-        className={`${baseStyles} ${variantStyles[variant]} ${variant !== "link" ? sizeStyles[size] : ""} ${className}`}
+        className={classes}
         {...props}
       >
         {isLoading && (
@@ -57,7 +80,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             ></path>
           </svg>
         )}
+        {leftIcon && <span className="mr-1.5 inline-flex">{leftIcon}</span>}
         {children}
+        {rightIcon && <span className="ml-1.5 inline-flex">{rightIcon}</span>}
       </button>
     );
   }

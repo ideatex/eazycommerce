@@ -6,3 +6,8 @@ export * from "./EmptyState";
 export * from "./Skeleton";
 export * from "./VerifiedBadge";
 export * from "./TrustFeaturesBar";
+export * from "./Badge";
+export * from "./Modal";
+export * from "./Input";
+export * from "./PageHeader";
+export * from "./DataTable";

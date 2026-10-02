@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Lets integration tests run a second server without fighting over .next/dev/lock.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   reactStrictMode: false,
   images: {
     remotePatterns: [
@@ -14,6 +16,10 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
       },
     ],
   },

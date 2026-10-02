@@ -1,36 +1,42 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import ProductCard from "@/components/Common/ProductCard";
-import { mockProducts, mockCategories } from "@/data/mockProducts";
-import { initialOrganizations } from "@/lib/b2b2c/mockVanigamData";
-import { Product } from "@/types/product";
+import type { StoreCategory, StoreProduct } from "@/types/storefront";
 
 interface Props {
-  initialProducts?: Product[];
+  products: StoreProduct[];
+  categories: StoreCategory[];
+  /** Category this page is scoped to (server-filtered); "all" for the full catalogue. */
   initialCategory?: string;
+  /** Total published products, used for the "All" count when the list is category-scoped. */
+  totalCount?: number;
   initialSort?: string;
+  initialSearch?: string;
 }
 
 export default function ShopWithSidebarContent({
+  products,
+  categories,
   initialCategory = "all",
+  totalCount,
   initialSort = "default",
+  initialSearch = "",
 }: Props) {
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [selectedSeller, setSelectedSeller] = useState("all");
+  const selectedCategory = initialCategory;
   const [selectedPriceRange, setSelectedPriceRange] = useState("all");
   const [minRating, setMinRating] = useState(0);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [sortBy, setSortBy] = useState(initialSort);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
-  // Sellers available in B2B2C marketplace
-  const sellers = initialOrganizations.filter((o) => o.organizationType !== "PLATFORM");
+  const categoryTitle = (slug: string) => categories.find((c) => c.slug === slug)?.name;
 
   const filteredProducts = useMemo(() => {
-    return mockProducts.filter((p) => {
+    return products.filter((p) => {
       // Search filter
       if (
         searchQuery &&
@@ -41,7 +47,7 @@ export default function ShopWithSidebarContent({
       }
 
       // Category filter
-      if (selectedCategory !== "all" && p.category.slug !== selectedCategory) {
+      if (selectedCategory !== "all" && p.category?.slug !== selectedCategory) {
         return false;
       }
 
@@ -51,19 +57,19 @@ export default function ShopWithSidebarContent({
       }
 
       // Price filter
-      const price = p.discountedPrice || p.price;
-      if (selectedPriceRange === "under-50" && price >= 50) return false;
-      if (selectedPriceRange === "50-100" && (price < 50 || price > 100)) return false;
-      if (selectedPriceRange === "100-500" && (price < 100 || price > 500)) return false;
-      if (selectedPriceRange === "above-500" && price <= 500) return false;
+      const price = p.sellingPrice;
+      if (selectedPriceRange === "under-500" && price >= 500) return false;
+      if (selectedPriceRange === "500-2000" && (price < 500 || price > 2000)) return false;
+      if (selectedPriceRange === "2000-10000" && (price < 2000 || price > 10000)) return false;
+      if (selectedPriceRange === "above-10000" && price <= 10000) return false;
 
       // Rating filter
       if (minRating > 0 && p.rating < minRating) return false;
 
       return true;
     }).sort((a, b) => {
-      const priceA = a.discountedPrice || a.price;
-      const priceB = b.discountedPrice || b.price;
+      const priceA = a.sellingPrice;
+      const priceB = b.sellingPrice;
 
       if (sortBy === "price-low") return priceA - priceB;
       if (sortBy === "price-high") return priceB - priceA;
@@ -71,11 +77,9 @@ export default function ShopWithSidebarContent({
       if (sortBy === "rating") return b.rating - a.rating;
       return 0;
     });
-  }, [selectedCategory, selectedPriceRange, minRating, inStockOnly, sortBy, searchQuery]);
+  }, [products, selectedCategory, selectedPriceRange, minRating, inStockOnly, sortBy, searchQuery]);
 
   const resetFilters = () => {
-    setSelectedCategory("all");
-    setSelectedSeller("all");
     setSelectedPriceRange("all");
     setMinRating(0);
     setInStockOnly(false);
@@ -84,8 +88,6 @@ export default function ShopWithSidebarContent({
   };
 
   const hasActiveFilters =
-    selectedCategory !== "all" ||
-    selectedSeller !== "all" ||
     selectedPriceRange !== "all" ||
     minRating > 0 ||
     inStockOnly ||
@@ -101,65 +103,32 @@ export default function ShopWithSidebarContent({
         </h3>
         <ul className="space-y-1.5 text-sm">
           <li>
-            <button
-              onClick={() => setSelectedCategory("all")}
+            <Link
+              href="/shop-with-sidebar"
               className={`w-full text-left py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-between ${
                 selectedCategory === "all" ? "bg-blue text-white" : "text-gray-600 hover:bg-gray-2"
               }`}
             >
               <span>All Categories</span>
-              <span className="text-[11px] opacity-80">{mockProducts.length}</span>
-            </button>
+              <span className="text-[11px] opacity-80">{totalCount ?? products.length}</span>
+            </Link>
           </li>
-          {mockCategories.map((cat) => {
-            const count = mockProducts.filter((p) => p.category.slug === cat.slug).length;
+          {categories.map((cat) => {
             const isSelected = selectedCategory === cat.slug;
             return (
               <li key={cat.slug}>
-                <button
-                  onClick={() => setSelectedCategory(cat.slug)}
+                <Link
+                  href={`/categories/${cat.slug}`}
                   className={`w-full text-left py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-between ${
                     isSelected ? "bg-blue text-white" : "text-gray-600 hover:bg-gray-2"
                   }`}
                 >
-                  <span>{cat.title}</span>
-                  <span className="text-[11px] opacity-80">{count}</span>
-                </button>
+                  <span>{cat.name}</span>
+                  <span className="text-[11px] opacity-80">{cat.productCount}</span>
+                </Link>
               </li>
             );
           })}
-        </ul>
-      </div>
-
-      {/* Verified Sellers & Stores */}
-      <div className="bg-white p-5 rounded-2xl border border-gray-3 shadow-xs">
-        <h3 className="font-bold text-dark text-sm mb-3.5 pb-2 border-b border-gray-2 uppercase tracking-wider text-[11px] text-gray-500">
-          Verified Stores
-        </h3>
-        <ul className="space-y-1.5 text-xs font-medium">
-          <li>
-            <button
-              onClick={() => setSelectedSeller("all")}
-              className={`w-full text-left py-1.5 px-3 rounded-lg transition-colors flex items-center justify-between ${
-                selectedSeller === "all" ? "bg-blue text-white font-bold" : "text-gray-600 hover:bg-gray-2"
-              }`}
-            >
-              <span>All Partner Stores</span>
-            </button>
-          </li>
-          {sellers.map((s) => (
-            <li key={s.id}>
-              <button
-                onClick={() => setSelectedSeller(s.name)}
-                className={`w-full text-left py-1.5 px-3 rounded-lg transition-colors flex items-center justify-between ${
-                  selectedSeller === s.name ? "bg-blue text-white font-bold" : "text-gray-600 hover:bg-gray-2"
-                }`}
-              >
-                <span>{s.name}</span>
-                <span className="text-[10px] uppercase opacity-75">{s.organizationType === "MANUFACTURER" ? "Brand" : "Store"}</span>
-              </button>
-            </li>
-          ))}
         </ul>
       </div>
 
@@ -171,10 +140,10 @@ export default function ShopWithSidebarContent({
         <div className="space-y-2 text-xs">
           {[
             { id: "all", label: "All Prices" },
-            { id: "under-50", label: "Under $50" },
-            { id: "50-100", label: "$50 to $100" },
-            { id: "100-500", label: "$100 to $500" },
-            { id: "above-500", label: "Above $500" },
+            { id: "under-500", label: "Under ₹500" },
+            { id: "500-2000", label: "₹500 to ₹2,000" },
+            { id: "2000-10000", label: "₹2,000 to ₹10,000" },
+            { id: "above-10000", label: "Above ₹10,000" },
           ].map((range) => (
             <label
               key={range.id}
@@ -253,7 +222,7 @@ export default function ShopWithSidebarContent({
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-bold text-blue uppercase tracking-wider">
-                Marketplace Catalog
+                Catalogue
               </span>
               <span className="text-xs text-gray-400">•</span>
               <span className="text-xs text-emerald-600 font-semibold">100% Authentic Guaranteed</span>
@@ -261,7 +230,7 @@ export default function ShopWithSidebarContent({
             <h1 className="text-2xl sm:text-3xl font-extrabold text-dark">
               {selectedCategory === "all"
                 ? "All Products & Equipment"
-                : mockCategories.find((c) => c.slug === selectedCategory)?.title || "Products"}
+                : categoryTitle(selectedCategory) || "Products"}
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">
               Showing <span className="font-bold text-dark">{filteredProducts.length}</span> verified results
@@ -346,14 +315,8 @@ export default function ShopWithSidebarContent({
             <span className="text-xs text-gray-400 font-semibold">Active:</span>
             {selectedCategory !== "all" && (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue/10 text-blue rounded-full text-xs font-bold">
-                {mockCategories.find((c) => c.slug === selectedCategory)?.title || selectedCategory}
-                <button onClick={() => setSelectedCategory("all")}>×</button>
-              </span>
-            )}
-            {selectedSeller !== "all" && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-bold">
-                Store: {selectedSeller}
-                <button onClick={() => setSelectedSeller("all")}>×</button>
+                {categoryTitle(selectedCategory) || selectedCategory}
+                <Link href="/shop-with-sidebar" aria-label="Clear category">×</Link>
               </span>
             )}
             {selectedPriceRange !== "all" && (
@@ -421,7 +384,6 @@ export default function ShopWithSidebarContent({
                     key={product.id}
                     product={product}
                     variant="default"
-                    sellerName="Velocity Tech Store"
                   />
                 ))}
               </div>
@@ -432,7 +394,6 @@ export default function ShopWithSidebarContent({
                     key={product.id}
                     product={product}
                     variant="horizontal"
-                    sellerName="Velocity Tech Store"
                   />
                 ))}
               </div>

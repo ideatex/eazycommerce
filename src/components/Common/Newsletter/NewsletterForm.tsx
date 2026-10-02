@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { actionSubscribeNewsletter } from "@/actions/vanigamActions";
+import { apiRequest } from "@/lib/clientApi";
 
 export default function NewsletterForm() {
   const [email, setEmail] = useState("");
@@ -16,15 +16,14 @@ export default function NewsletterForm() {
     }
 
     setIsSubmitting(true);
-    try {
-      const res = await actionSubscribeNewsletter(email);
-      toast.success(res.message || "Thank you for subscribing!");
-      setEmail("");
-    } catch {
+    const res = await apiRequest("/api/newsletter", { body: { email } });
+    setIsSubmitting(false);
+
+    if (res.ok) {
       toast.success("Thank you for subscribing!");
       setEmail("");
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      toast.error(res.error);
     }
   };
 

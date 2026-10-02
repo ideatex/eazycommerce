@@ -3,14 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getSession, signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 
 export default function SignInView() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@vanigam.com");
-  const [password, setPassword] = useState("admin123");
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,20 +25,28 @@ export default function SignInView() {
     setIsLoading(true);
     try {
       const res = await signIn("credentials", {
-        email,
+        email: email.trim(),
         password,
         redirect: false,
       });
 
-      if (res?.error) {
-        toast.error("Invalid credentials. Please try again.");
-      } else {
-        toast.success("Welcome back! Signed in successfully.");
-        router.push("/admin/dashboard");
+      if (!res || res.error) {
+        toast.error("Invalid email or password.");
+        return;
       }
+
+      // Only same-site paths are honoured as a post-login destination.
+      const callback = searchParams.get("callbackUrl");
+      const safeCallback = callback && /^\/(?!\/)/.test(callback) ? callback : null;
+      const session = await getSession();
+      const role = (session?.user as { role?: string } | undefined)?.role;
+      const isStaff = role === "SUPER_ADMIN" || role === "ADMIN" || role === "STAFF";
+
+      toast.success("Signed in successfully.");
+      router.push(safeCallback ?? (isStaff ? "/admin" : "/account"));
+      router.refresh();
     } catch {
-      toast.success("Signed in in sandbox mode!");
-      router.push("/admin/dashboard");
+      toast.error("We could not sign you in right now. Please try again.");
     } finally {
       setIsLoading(false);
     }

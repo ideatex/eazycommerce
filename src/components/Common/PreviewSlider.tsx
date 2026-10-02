@@ -13,6 +13,10 @@ const PreviewSliderModal = () => {
 
   const data = useAppSelector((state) => state.productDetailsReducer.value);
 
+  // Real product photos; older callers only had variant images.
+  const anyData = data as unknown as { previews?: string[]; productVariants?: Array<{ image?: string }> };
+  const images: string[] = (anyData.previews?.length ? anyData.previews : (anyData.productVariants ?? []).map((v) => v.image ?? "")).filter(Boolean);
+
   const sliderRef = useRef(null);
 
   const handlePrev = useCallback(() => {
@@ -98,14 +102,16 @@ const PreviewSliderModal = () => {
       </div>
 
       <Swiper ref={sliderRef} slidesPerView={1} spaceBetween={20}>
-        {data.productVariants?.map((img: any, key:number) => (
-          <SwiperSlide key={key}>
+        {images.map((src: string, key: number) => (
+          <SwiperSlide key={`${src}-${key}`}>
             <div className="flex justify-center items-center">
               <Image
-                src={img.image ? img.image : "/"}
-                alt={data.title || "thumb-img"}
+                src={src}
+                alt={data.title || "Product image"}
                 width={450}
                 height={450}
+                unoptimized={!src.startsWith("/")}
+                className="max-h-[80vh] w-auto object-contain"
               />
             </div>
           </SwiperSlide>

@@ -3,7 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useCart } from "@/hooks/useCart";
-import { menuData } from "./menuData";
+import { useMemo } from "react";
+import { buildMenuData } from "./menuData";
 import MobileMenu from "./MobileMenu";
 import DesktopMenu from "./DesktopMenu";
 import {
@@ -17,12 +18,16 @@ import {
 import SearchModal from "./SearchModal";
 import { HeaderSetting } from "@prisma/client";
 import { useAppSelector } from "@/redux/store";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/commerce";
+import { formatPrice } from "@/utils/formatePrice";
 
 type IProps = {
   headerData?: HeaderSetting | null;
+  categories?: Array<{ name: string; slug: string }>;
 };
 
-const MainHeader = ({ headerData }: IProps) => {
+const MainHeader = ({ headerData, categories = [] }: IProps) => {
+  const menuData = useMemo(() => buildMenuData(categories), [categories]);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -89,7 +94,7 @@ const MainHeader = ({ headerData }: IProps) => {
               <div className="hidden lg:block">
                 <p className="text-sm font-medium text-white">
                   {headerData?.headerText ||
-                    "Get free delivery on orders over $100"}
+                    `Free delivery on orders over ${formatPrice(FREE_SHIPPING_THRESHOLD)}`}
                 </p>
               </div>
               <div className="flex divide-x divide-white/20 ml-auto">
@@ -125,9 +130,6 @@ const MainHeader = ({ headerData }: IProps) => {
                     className="h-10 sm:h-12 xl:h-13 w-auto object-contain transition-transform duration-200 hover:scale-[1.02]"
                     priority
                   />
-                  <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full bg-blue/10 text-blue text-xs font-bold tracking-wide uppercase border border-blue/20">
-                    Marketplace
-                  </span>
                 </div>
               </Link>
             </div>
@@ -143,7 +145,7 @@ const MainHeader = ({ headerData }: IProps) => {
                 className="transition hover:text-blue focus:outline-none w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-2 text-dark"
                 onClick={() => setSearchModalOpen(true)}
                 aria-label="Search"
-                title="Search products and stores"
+                title="Search products"
               >
                 <SearchIcon />
               </button>

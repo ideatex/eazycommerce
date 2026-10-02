@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { apiRequest } from "@/lib/clientApi";
 
 export default function SignUpView() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function SignUpView() {
     email: "",
     password: "",
     confirmPassword: "",
-    agreeTerms: true,
+    agreeTerms: false,
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,25 +34,16 @@ export default function SignUpView() {
     }
 
     setIsLoading(true);
-    try {
-      const { actionRegisterUser } = await import("@/actions/vanigamActions");
-      const res = await actionRegisterUser({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-      });
+    const res = await apiRequest("/api/auth/register", {
+      body: { name: formData.name, email: formData.email, password: formData.password },
+    });
+    setIsLoading(false);
 
-      if (!res.success) {
-        toast.error(res.error || "Failed to create account.");
-      } else {
-        toast.success("Account created successfully! Please sign in.");
-        router.push("/signin");
-      }
-    } catch {
-      toast.success("Account created in sandbox mode! Please sign in.");
+    if (res.ok) {
+      toast.success("Account created! Please sign in.");
       router.push("/signin");
-    } finally {
-      setIsLoading(false);
+    } else {
+      toast.error(res.error);
     }
   };
 

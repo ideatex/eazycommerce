@@ -3,7 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Product } from "@/types/product";
+import type { StoreProduct } from "@/types/storefront";
 import { formatPrice } from "@/utils/formatePrice";
 import { calculateDiscountPercentage } from "@/utils/calculateDiscountPercentage";
 import { useCart } from "@/hooks/useCart";
@@ -13,18 +13,17 @@ import { updateQuickView } from "@/redux/features/quickView-slice";
 import { addItemToWishlist, removeItemFromWishlist } from "@/redux/features/wishlist-slice";
 import { useModalContext } from "@/app/context/QuickViewModalContext";
 import toast from "react-hot-toast";
+import ReviewStar from "@/components/Shop/ReviewStar";
 
 export interface ProductCardProps {
-  product: Product;
+  product: StoreProduct;
   variant?: "default" | "compact" | "horizontal" | "featured";
-  sellerName?: string;
   className?: string;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   variant = "default",
-  sellerName = "Velocity Tech Store",
   className = "",
 }) => {
   const { addItem, cartDetails } = useCart();
@@ -33,13 +32,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const wishlistItems = useAppSelector((state) => state.wishlistReducer.items);
   const isWishlisted = Object.values(wishlistItems ?? {}).some((w) => w.id === product.id);
-  const isAlreadyInCart = Object.values(cartDetails ?? {}).some((item) => item.id === product.id);
+  const isAlreadyInCart = Object.values(cartDetails ?? {}).some((item) => (item.productId ?? item.id) === product.id);
 
   const defaultVariant = product.productVariants?.find((v) => v.isDefault) || product.productVariants?.[0];
-  const displayImage = defaultVariant?.image || (product as any).previews?.[0] || (product as any).thumbnails?.[0] || "/images/products/product-1-bg-1.png";
+  const displayImage = defaultVariant?.image || product.previews[0] || "/images/placeholder.svg";
+  // Admin-entered image URLs can point at any host, so only local files go through the optimizer.
+  const unoptimized = !displayImage.startsWith("/");
 
-  const effectivePrice = product.discountedPrice && product.discountedPrice > 0 ? product.discountedPrice : product.price;
-  const isOutOfStock = product.quantity < 1;
+  const effectivePrice = product.sellingPrice;
+  const isOutOfStock = !defaultVariant || defaultVariant.available < 1;
+  const lowStock = !isOutOfStock && defaultVariant.available <= 5;
   const discountPercent = product.discountedPrice && product.discountedPrice > 0
     ? calculateDiscountPercentage(product.discountedPrice, product.price)
     : 0;
@@ -60,19 +62,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       toast.error("This item is currently out of stock");
       return;
     }
+    if (!defaultVariant) {
+      toast.error("This item cannot be purchased right now");
+      return;
+    }
     addItem({
-      id: product.id,
+      id: defaultVariant.id,
+      productId: product.id,
+      variantId: defaultVariant.id,
       name: product.title,
       price: effectivePrice,
-      currency: "usd",
+      currency: "inr",
       image: displayImage,
       slug: product.slug,
-      availableQuantity: product.quantity,
-      color: defaultVariant?.color || "",
-      size: defaultVariant?.size || "",
-      organizationId: "org-seller-velocity",
-      organizationName: sellerName,
-    } as any);
+      availableQuantity: defaultVariant.available,
+      moq: product.moq,
+      color: defaultVariant.color || "",
+      size: defaultVariant.size || "",
+      quantity: product.moq,
+    });
     toast.success(`Added ${product.title} to cart`);
   };
 
@@ -106,6 +114,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <Link href={`/products/${product.slug}`} className="w-full h-full flex items-center justify-center">
             <Image
               src={displayImage}
+              unoptimized={unoptimized}
               alt={product.title}
               width={160}
               height={160}
@@ -123,10 +132,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div>
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                {(product as any).category?.title || "Electronics"}
-              </span>
-              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                {sellerName}
+                {product.category?.title || "Catalog"}
               </span>
             </div>
 
@@ -135,7 +141,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </h3>
 
             <p className="text-xs text-gray-500 line-clamp-2 mb-3">
-              {(product as any).shortDescription || (product as any).description || "High-performance gear engineered for reliability and daily durability."}
+              {product.shortDescription || product.description}
             </p>
           </div>
 
@@ -185,6 +191,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <Link href={`/products/${product.slug}`} className="w-full h-full flex items-center justify-center">
             <Image
               src={displayImage}
+              unoptimized={unoptimized}
               alt={product.title}
               width={120}
               height={120}
@@ -211,12 +218,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   // 3. Default & Featured Grid Variant
   return (
-    <div className={`group bg-white rounded-2xl border border-gray-3 p-4 flex flex-col justify-between hover:border-blue/40 hover:shadow-md transition-all duration-200 relative ${className}`}>
+    <div className={`group bg-white rounded-2xl border border-gray-3 p-4 flex flex-col justify-between hover:border-blue/40 hover:shadow-md hover:-translate-y-0.5 focus-within:border-blue/40 transition-all duration-200 relative ${className}`}>
       {/* Top Image Container */}
       <div className="relative w-full aspect-square rounded-xl bg-gray-2 border border-gray-2 flex items-center justify-center p-4 mb-4 overflow-hidden">
         <Link href={`/products/${product.slug}`} className="w-full h-full flex items-center justify-center">
           <Image
             src={displayImage}
+              unoptimized={unoptimized}
             alt={product.title}
             width={240}
             height={240}
@@ -241,7 +249,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <button
           onClick={handleToggleWishlist}
           title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-          className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-xs z-10 ${
+          aria-label={isWishlisted ? `Remove ${product.title} from wishlist` : `Add ${product.title} to wishlist`}
+          aria-pressed={isWishlisted}
+          className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-xs z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 ${
             isWishlisted
               ? "bg-red text-white"
               : "bg-white/90 text-gray-500 hover:text-red hover:bg-white"
@@ -255,7 +265,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Quick View Hover Trigger */}
         <button
           onClick={handleQuickView}
-          className="absolute bottom-2.5 inset-x-4 py-2 rounded-xl text-xs font-bold bg-white/95 text-dark shadow-sm border border-gray-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:bg-blue hover:text-white flex items-center justify-center gap-1.5"
+          aria-label={`Quick preview of ${product.title}`}
+          className="absolute bottom-2.5 inset-x-4 py-2 rounded-xl text-xs font-bold bg-white/95 text-dark shadow-sm border border-gray-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 focus-visible:opacity-100 focus-visible:translate-y-0 [@media(hover:none)]:opacity-100 [@media(hover:none)]:translate-y-0 transition-all duration-200 hover:bg-blue hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 flex items-center justify-center gap-1.5"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -271,10 +282,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {/* Seller / Verified Partner Context */}
           <div className="flex items-center justify-between gap-1 mb-1">
             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider line-clamp-1">
-              {(product as any).category?.title || "Electronics"}
-            </span>
-            <span className="text-[10px] font-semibold text-blue flex items-center gap-0.5 line-clamp-1">
-              ✓ {sellerName}
+              {product.category?.title || "Catalog"}
             </span>
           </div>
 
@@ -282,6 +290,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <h3 className="font-bold text-dark text-sm leading-snug line-clamp-2 hover:text-blue transition-colors mb-2">
             <Link href={`/products/${product.slug}`}>{product.title}</Link>
           </h3>
+
+          {product.reviews > 0 && (
+            <div className="flex items-center gap-1.5 mb-1">
+              <ReviewStar avgRating={product.rating} />
+              <span className="text-[11px] text-gray-400">({product.reviews})</span>
+            </div>
+          )}
         </div>
 
         <div>
@@ -298,8 +313,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               )}
             </div>
 
-            <span className={`text-[11px] font-medium ${isOutOfStock ? "text-red-600" : "text-emerald-600"}`}>
-              {isOutOfStock ? "Out of stock" : "In stock"}
+            <span className={`text-[11px] font-medium ${isOutOfStock ? "text-red-600" : lowStock ? "text-amber-600" : "text-emerald-600"}`}>
+              {isOutOfStock ? "Out of stock" : lowStock ? `Only ${defaultVariant.available} left` : "In stock"}
             </span>
           </div>
 

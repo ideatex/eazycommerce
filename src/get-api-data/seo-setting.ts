@@ -1,56 +1,42 @@
 import { prisma } from "@/lib/prismaDB";
-import { unstable_cache } from "next/cache";
 
-// get all seo settings
-export const getSeoSettings = unstable_cache(
-  async () => {
-    try {
-      const { getCmsSeoSettings } = await import("@/services/cmsService");
-      return await getCmsSeoSettings();
-    } catch {
-      return null;
-    }
-  },
-  ['seo-setting'], { tags: ['seo-setting'] }
-);
+/** Site-wide SEO settings from the database; null when none are stored. */
+export async function getSeoSettings() {
+  try {
+    return await prisma.seoSetting.findFirst();
+  } catch (err) {
+    console.error("[seo-setting] could not load SEO settings:", err);
+    return null;
+  }
+}
 
-export const getSiteName = unstable_cache(
-  async () => {
-    try {
-      const { getCmsSeoSettings } = await import("@/services/cmsService");
-      const seo = await getCmsSeoSettings();
-      return seo.siteName || process.env.SITE_NAME || "Vanigam Commerce";
-    } catch {
-      return process.env.SITE_NAME ? process.env.SITE_NAME : "Vanigam Commerce";
-    }
-  },
-  ['site-name'], { tags: ['site-name'] }
-);
+/** Display name: SEO setting, then the store name from Admin → Settings, then the environment. */
+export async function getSiteName(): Promise<string> {
+  try {
+    const seo = await prisma.seoSetting.findFirst({ select: { siteName: true } });
+    if (seo?.siteName) return seo.siteName;
+    const business = await prisma.business.findFirst({ orderBy: { createdAt: "asc" }, select: { name: true } });
+    if (business?.name) return business.name;
+  } catch (err) {
+    console.error("[seo-setting] could not load site name:", err);
+  }
+  return process.env.SITE_NAME || "Vanigam Commerce";
+}
 
-// get logo 
-export const getLogo = unstable_cache(
-  async () => {
-    try {
-      const { getCmsHeaderSettings } = await import("@/services/cmsService");
-      const header = await getCmsHeaderSettings();
-      return header.headerLogo || "/images/logo/logo.svg";
-    } catch {
-      return "/images/logo/logo.svg";
-    }
-  },
-  ['header-logo'], { tags: ['header-logo'] }
-);
+export async function getLogo(): Promise<string> {
+  try {
+    const header = await prisma.headerSetting.findFirst({ select: { headerLogo: true } });
+    return header?.headerLogo || "/images/logo/logo.svg";
+  } catch {
+    return "/images/logo/logo.svg";
+  }
+}
 
-// get email logo
-export const getEmailLogo = unstable_cache(
-  async () => {
-    try {
-      const { getCmsHeaderSettings } = await import("@/services/cmsService");
-      const header = await getCmsHeaderSettings();
-      return header.emailLogo || "/images/logo/logo.svg";
-    } catch {
-      return "/images/logo/logo.svg";
-    }
-  },
-  ['email-logo'], { tags: ['email-logo'] }
-);
+export async function getEmailLogo(): Promise<string> {
+  try {
+    const header = await prisma.headerSetting.findFirst({ select: { emailLogo: true } });
+    return header?.emailLogo || "/images/logo/logo.svg";
+  } catch {
+    return "/images/logo/logo.svg";
+  }
+}

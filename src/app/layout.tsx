@@ -23,8 +23,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const site_name = await getSiteName();
   return {
     title: `${seoSettings?.siteTitle || "Home Page"} | ${site_name}`,
-    description: seoSettings?.metadescription || "Vanigam Commerce is a modern B2B2C e-commerce platform connecting manufacturers, suppliers, distributors, sellers, and consumers.",
-    keywords: seoSettings?.metaKeywords || "e-commerce, online store, marketplace, b2b2c",
+    description: seoSettings?.metadescription || "Vanigam Commerce is an online store for retail and wholesale buyers.",
+    keywords: seoSettings?.metaKeywords || "e-commerce, online store, wholesale",
     openGraph: {
       images: seoSettings?.metaImage ? [seoSettings.metaImage] : [],
     },

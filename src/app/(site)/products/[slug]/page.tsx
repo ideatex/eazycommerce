@@ -1,7 +1,11 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { mockProducts } from "@/data/mockProducts";
 import ProductDetailsView from "@/components/Product/ProductDetailsView";
+import {
+  getRelatedStorefrontProducts,
+  getStorefrontProductBySlug,
+  getStoreReviews,
+} from "@/lib/storefront";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -9,35 +13,24 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = mockProducts.find((p) => p.slug === slug);
-
-  if (!product) {
-    return {
-      title: "Product Not Found | VANIGAM",
-    };
-  }
-
+  const product = await getStorefrontProductBySlug(slug);
+  if (!product) return { title: "Product Not Found | VANIGAM" };
   return {
     title: `${product.title} | VANIGAM`,
-    description: product.shortDescription,
+    description: product.shortDescription || product.description.slice(0, 160),
   };
 }
 
 export default async function ProductDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const product = mockProducts.find((p) => p.slug === slug);
+  const product = await getStorefrontProductBySlug(slug);
+  // Draft and archived products are not publicly reachable.
+  if (!product) notFound();
 
-  if (!product) {
-    // If not found in mock, fallback to first product or notFound
-    const fallback = mockProducts[0];
-    if (!fallback) notFound();
-    const related = mockProducts.filter((p) => p.id !== fallback.id);
-    return <ProductDetailsView product={fallback} relatedProducts={related} />;
-  }
+  const [relatedProducts, reviews] = await Promise.all([
+    getRelatedStorefrontProducts(product),
+    getStoreReviews(product.id),
+  ]);
 
-  const relatedProducts = mockProducts.filter(
-    (p) => p.id !== product.id && (p.category.slug === product.category.slug || true)
-  );
-
-  return <ProductDetailsView product={product} relatedProducts={relatedProducts} />;
+  return <ProductDetailsView product={product} relatedProducts={relatedProducts} reviews={reviews} />;
 }

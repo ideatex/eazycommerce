@@ -10,7 +10,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.NEXTAUTH_SECRET || "vanigam-b2b2c-ecommerce-secret-key-2026",
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "google-client-id-placeholder",
@@ -27,92 +27,37 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
-        }
+        const email = credentials?.email?.trim().toLowerCase();
+        const password = credentials?.password;
+        if (!email || !password) return null;
 
-        try {
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email },
-            include: {
-              memberships: {
-                include: {
-                  organization: true,
-                  role: {
-                    include: {
-                      rolePermissions: {
-                        include: {
-                          permission: true,
-                        },
-                      },
-                    },
-                  },
-                },
+        // Case-insensitive so accounts stored with capital letters can still sign in.
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+          include: {
+            memberships: {
+              include: {
+                organization: true,
+                role: { include: { rolePermissions: { include: { permission: true } } } },
               },
             },
-          });
+          },
+        });
 
-          if (user && user.password) {
-            const isCorrect = await bcrypt.compare(credentials.password, user.password);
-            if (isCorrect) {
-              return {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                image: user.image,
-                memberships: user.memberships,
-              } as any;
-            }
-          }
-        } catch {
-          // If DB is offline, allow demo authentication
-        }
+        // Same response for unknown user / no password / wrong password / disabled account.
+        if (!user || !user.password || !user.isActive) return null;
+        const isCorrect = await bcrypt.compare(password, user.password);
+        if (!isCorrect) return null;
 
-        // Demo Accounts Fallback
-        if (
-          credentials.email === "admin@vanigam.com" ||
-          credentials.email === "admin@example.com"
-        ) {
-          return {
-            id: "usr-platform-admin",
-            name: "Platform Administrator",
-            email: credentials.email,
-            image: "/images/users/user-01.png",
-            role: "SUPER_ADMIN",
-            activeOrgId: "org-platform",
-          } as any;
-        }
+        await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
-        if (credentials.email === "supplier@techflow.com") {
-          return {
-            id: "usr-supplier-01",
-            name: "Marcus Vance (TechFlow Manufacturing)",
-            email: credentials.email,
-            image: "/images/users/user-02.png",
-            role: "ORG_OWNER",
-            activeOrgId: "org-supplier-techflow",
-          } as any;
-        }
-
-        if (credentials.email === "distributor@apex.com") {
-          return {
-            id: "usr-distributor-01",
-            name: "Sophia Chen (Apex Global Distribution)",
-            email: credentials.email,
-            image: "/images/users/user-03.png",
-            role: "ORG_OWNER",
-            activeOrgId: "org-distributor-apex",
-          } as any;
-        }
-
-        // Allow instant customer test login
         return {
-          id: `usr-customer-${Date.now()}`,
-          name: credentials.email.split("@")[0],
-          email: credentials.email,
-          image: "/images/users/user-01.png",
-          role: "CUSTOMER",
-          activeOrgId: null,
+          id: user.id,
+          email: user.email,
+          name: user.fullName || user.name,
+          image: user.image,
+          role: user.role,
+          memberships: user.memberships,
         } as any;
       },
     }),

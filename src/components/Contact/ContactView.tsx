@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { apiRequest } from "@/lib/clientApi";
 
 export default function ContactView() {
   const [formData, setFormData] = useState({
@@ -20,21 +21,21 @@ export default function ContactView() {
     }
 
     setIsSubmitting(true);
-    try {
-      const { actionSubmitContactMessage } = await import("@/actions/vanigamActions");
-      const res = await actionSubmitContactMessage({
+    const res = await apiRequest("/api/contact", {
+      body: {
         fullName: formData.name,
         email: formData.email,
         subject: formData.subject,
         message: formData.message,
-      });
-      toast.success(res.message || "Thank you! Your message has been sent.");
+      },
+    });
+    setIsSubmitting(false);
+
+    if (res.ok) {
+      toast.success("Thank you! Your message has been sent.");
       setFormData({ name: "", email: "", subject: "", message: "" });
-    } catch {
-      toast.success("Thank you! Your message has been sent. We will respond within 24 hours.");
-      setFormData({ name: "", email: "", subject: "", message: "" });
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      toast.error(res.error);
     }
   };
 

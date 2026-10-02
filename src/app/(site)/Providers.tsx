@@ -8,12 +8,14 @@ import { PreviewSliderProvider } from "../context/PreviewSliderContext";
 import PreviewSliderModal from "@/components/Common/PreviewSlider";
 import CartProvider from "@/components/Providers/CartProvider";
 import CartHydration from "@/components/Providers/CartHydration";
+import WishlistHydration from "@/components/Providers/WishlistHydration";
 
 const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
     <SessionProvider>
       <ReduxProvider>
         <CartHydration />
+        <WishlistHydration />
         <CartProvider>
           <ModalProvider>
             <PreviewSliderProvider>

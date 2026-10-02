@@ -21,11 +21,6 @@ const accountLinks = [
     label: "Wishlist",
     href: "/wishlist",
   },
-  {
-    id: 5,
-    label: "Verified Stores",
-    href: "/stores",
-  },
 ];
 
 export default function AccountLinks() {

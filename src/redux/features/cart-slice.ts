@@ -11,6 +11,10 @@ export type CartItem = {
   name: string;
   price: number;
   quantity: number;
+  /** Catalogue ids used to re-price the cart on the server. */
+  productId?: string;
+  variantId?: string;
+  moq?: number;
   currency?: string;
   image?: string;
   slug?: string;
@@ -124,10 +128,10 @@ export const selectTotalPrice = createSelector([selectCartItems], (items) => {
 export const selectFormattedTotalPrice = createSelector(
   [selectTotalPrice],
   (totalPrice) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "USD",
-    }).format(totalPrice / 100);
+      currency: "INR",
+    }).format(totalPrice);
   }
 );
 
